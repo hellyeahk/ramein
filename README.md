@@ -9,12 +9,6 @@ Untuk sementara, tambahkan video dengan paste URL YouTube di tombol **Find a vid
 Tidak perlu YouTube API key. Pengguna cukup paste URL YouTube, lalu video masuk ke queue.
 Metadata video diambil melalui YouTube oEmbed. Endpoint pencarian YouTube masih tersedia untuk pengembangan berikutnya, tetapi tidak dipakai oleh frontend saat ini.
 
-Untuk menjalankan lokal:
-
-```powershell
-python backend/server.py
-```
-
 ## Deploy ke Vercel
 
 Import repository ini ke Vercel tanpa environment variable. Vercel otomatis menyajikan file frontend dan endpoint `/api/video` serta `/api/search` sebagai serverless functions.
