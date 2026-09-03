@@ -22,7 +22,7 @@
     <main class="app-shell">
       <nav class="topbar">
         <a class="brand" href="#" aria-label="Ramein home"><span class="brand-mark">r</span><span>ramein</span></a>
-        <button class="room-presence room-button" id="roomButton" aria-label="Open room details"><span class="live-dot"></span><span>ROOM <b id="roomCode">7F3A</b></span><span class="presence-divider"></span><span id="viewerCount">connecting...</span><i data-lucide="chevron-down"></i></button>
+        <button class="room-presence room-button" id="roomButton" aria-label="Open room details"><span class="live-dot"></span><span>ROOM <b id="roomCode">7F3A</b></span><span class="presence-divider"></span><span id="viewerCount">local mode</span><i data-lucide="chevron-down"></i></button>
         <div class="top-actions">
           <button class="icon-button" id="inviteButton" title="Invite friends" aria-label="Invite friends"><i data-lucide="user-plus"></i></button>
           <button class="avatar avatar-you" title="Your profile" aria-label="Your profile">Y</button>
@@ -53,7 +53,7 @@
         </div>
 
         <aside class="chat-panel">
-          <div class="chat-header"><div><p class="eyebrow">THE LOUNGE</p><h2>Chat <span class="online-count"><span class="live-dot"></span> connecting...</span></h2></div><div class="chat-tools"><button class="icon-button subtle" id="chatFilterButton" title="Filter chat" aria-label="Filter chat"><i data-lucide="sliders-horizontal"></i></button><div class="filter-menu hidden" id="chatFilterMenu"><button data-filter="all">All messages</button><button data-filter="mine">My messages</button></div></div></div>
+          <div class="chat-header"><div><p class="eyebrow">THE LOUNGE</p><h2>Chat <span class="online-count"><span class="live-dot"></span> local mode</span></h2></div><div class="chat-tools"><button class="icon-button subtle" id="chatFilterButton" title="Filter chat" aria-label="Filter chat"><i data-lucide="sliders-horizontal"></i></button><div class="filter-menu hidden" id="chatFilterMenu"><button data-filter="all">All messages</button><button data-filter="mine">My messages</button></div></div></div>
           <div class="chat-feed" id="chatFeed"><div class="empty-state chat-empty"><i data-lucide="message-circle"></i><strong>Belum ada chat</strong><span>Jadilah yang pertama menyapa room ini.</span></div></div>
           <div class="reaction-bar"><button class="reaction" data-reaction="❤️">❤️ <span>12</span></button><button class="reaction" data-reaction="🔥">🔥 <span>8</span></button><button class="reaction" data-reaction="✨">✨ <span>5</span></button><button class="reaction add-reaction" data-reaction="🎉" aria-label="Add reaction"><i data-lucide="plus"></i></button></div>
           <form class="message-form" id="messageForm"><input id="messageInput" type="text" placeholder="Say something..." autocomplete="off" /><button type="submit" aria-label="Send message"><i data-lucide="arrow-up"></i></button></form>
