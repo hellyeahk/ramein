@@ -12,7 +12,7 @@ Metadata video diambil melalui YouTube oEmbed. Endpoint pencarian YouTube masih 
 Untuk menjalankan lokal:
 
 ```powershell
-python server.py
+python backend/server.py
 ```
 
 ## Deploy ke Vercel
