@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0e0f12" />
+    <title>Ramein — Watch together</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="states.css" />
+    <style>#videoPlayer{width:100%;height:100%}#videoPlayer iframe{width:100%;height:100%;border:0;display:block}</style>
+    <style>.video-overlay{inset:auto;left:50%;bottom:50%;width:0;height:0;background:none;pointer-events:none}.big-play{position:absolute;left:-33px;top:-33px;pointer-events:auto}</style>
+    <style>.video-frame iframe{pointer-events:none}.video-controls{position:absolute;z-index:4;left:16px;right:16px;bottom:14px;display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0e0f12d9;color:#d9d6ce;font:500 10px 'DM Mono',monospace}.video-controls input{flex:1;min-width:0;height:3px;accent-color:var(--accent)}.video-controls button{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#111}.video-controls button svg{width:12px;fill:#111}.video-controls button svg[data-lucide=pause]{fill:none}.video-frame{cursor:pointer}.video-frame .video-topline,.video-frame .video-controls,.video-frame .big-play{cursor:default}.video-frame .video-controls button,.video-frame .big-play{cursor:pointer}</style>
+    <style>.watching-list{display:grid;gap:8px;margin:4px 0 20px}.watching-list-title{color:var(--dim);font:500 9px 'DM Mono',monospace;letter-spacing:1px}.watching-person{display:flex;align-items:center;gap:8px;color:#d8d5ce;font-size:11px}.watching-person .avatar{width:24px;height:24px}.watching-person .person-status{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:auto}</style>
+    <style>.no-video-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:#17191b;color:var(--muted);text-align:center}.no-video-state svg{width:32px;color:var(--accent)}.no-video-state strong{color:var(--ink);font-size:15px}.no-video-state span{max-width:270px;font-size:11px;line-height:1.5}.filter-menu{position:absolute;right:0;top:43px;z-index:6;width:145px;padding:5px;background:#252629;border:1px solid #3b3c3e;box-shadow:0 12px 30px #0008}.chat-tools{position:relative}.filter-menu button{display:block;width:100%;padding:9px 10px;background:transparent;color:var(--muted);font-size:10px;text-align:left}.filter-menu button:hover,.filter-menu button.active{background:#34382b;color:var(--accent)}</style>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <nav class="topbar">
+        <a class="brand" href="#" aria-label="Ramein home"><span class="brand-mark">r</span><span>ramein</span></a>
+        <button class="room-presence room-button" id="roomButton" aria-label="Open room details"><span class="live-dot"></span><span>ROOM <b id="roomCode">7F3A</b></span><span class="presence-divider"></span><span id="viewerCount">connecting...</span><i data-lucide="chevron-down"></i></button>
+        <div class="top-actions">
+          <button class="icon-button" id="inviteButton" title="Invite friends" aria-label="Invite friends"><i data-lucide="user-plus"></i></button>
+          <button class="avatar avatar-you" title="Your profile" aria-label="Your profile">Y</button>
+        </div>
+      </nav>
+
+      <section class="workspace">
+        <div class="video-column">
+          <div class="video-frame" id="videoFrame">
+            <div class="video-topline"><span class="on-air"><span class="live-dot"></span> LIVE ROOM</span><span class="sync-status"><i data-lucide="link-2"></i> Synced</span></div>
+            <div id="videoPlayer"></div>
+            <div class="no-video-state" id="noVideoState"><i data-lucide="clapperboard"></i><strong>Belum ada video</strong><span>Tambahkan link YouTube ke queue, lalu pilih videonya untuk mulai menonton.</span></div>
+            <div class="video-overlay"><button class="big-play" id="playButton" aria-label="Play or pause video"><i data-lucide="play"></i></button></div>
+            <div class="video-controls"><span id="currentTime">00:00</span><input type="range" id="progressBar" min="0" max="100" value="0" aria-label="Video progress"><span id="durationTime">00:00</span><button id="controlPlayButton" aria-label="Pause or continue video"><i data-lucide="play"></i></button></div>
+          </div>
+          <div class="video-meta">
+            <div>
+              <p class="eyebrow">NOW PLAYING</p>
+              <h1 id="nowPlayingTitle">Belum ada video diputar</h1>
+              <div class="meta-line"><span class="channel-avatar">·</span><span id="nowPlayingChannel">Queue masih kosong</span><span class="meta-separator"></span><span id="nowPlayingViews">Tambahkan video untuk mulai</span></div>
+            </div>
+            <button class="queue-button" id="queueButton"><i data-lucide="search"></i> Find a video</button>
+          </div>
+          <section class="up-next">
+            <div class="section-heading"><div><p class="eyebrow">UP NEXT</p><h2>Queue <span>· <b id="queueCount">0</b> videos</span></h2></div><button class="text-button" id="clearQueue">Clear all</button></div>
+            <div class="queue-list" id="queueList"><div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link YouTube untuk mulai menyusun tontonan.</span><button class="empty-action" id="emptyQueueButton">Add first video</button></div></div>
+          </section>
+        </div>
+
+        <aside class="chat-panel">
+          <div class="chat-header"><div><p class="eyebrow">THE LOUNGE</p><h2>Chat <span class="online-count"><span class="live-dot"></span> connecting...</span></h2></div><div class="chat-tools"><button class="icon-button subtle" id="chatFilterButton" title="Filter chat" aria-label="Filter chat"><i data-lucide="sliders-horizontal"></i></button><div class="filter-menu hidden" id="chatFilterMenu"><button data-filter="all">All messages</button><button data-filter="mine">My messages</button></div></div></div>
+          <div class="chat-feed" id="chatFeed"><div class="empty-state chat-empty"><i data-lucide="message-circle"></i><strong>Belum ada chat</strong><span>Jadilah yang pertama menyapa room ini.</span></div></div>
+          <div class="reaction-bar"><button class="reaction" data-reaction="❤️">❤️ <span>12</span></button><button class="reaction" data-reaction="🔥">🔥 <span>8</span></button><button class="reaction" data-reaction="✨">✨ <span>5</span></button><button class="reaction add-reaction" data-reaction="🎉" aria-label="Add reaction"><i data-lucide="plus"></i></button></div>
+          <form class="message-form" id="messageForm"><input id="messageInput" type="text" placeholder="Say something..." autocomplete="off" /><button type="submit" aria-label="Send message"><i data-lucide="arrow-up"></i></button></form>
+          <p class="chat-note"><i data-lucide="lock-keyhole"></i> Messages disappear when the room ends</p>
+        </aside>
+      </section>
+    </main>
+    <div class="modal-backdrop" id="welcomeModal">
+      <section class="modal-card welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+        <div class="modal-brand"><span class="brand-mark">r</span><span>ramein</span></div>
+        <p class="eyebrow">WATCH TOGETHER</p>
+        <h2 id="welcomeTitle">Your people,<br><em>your room.</em></h2>
+        <p class="modal-copy">Masuk tanpa akun. Cukup pakai nama, buat room baru, atau gabung dengan kode teman.</p>
+        <label class="field-label" for="nameInput">Nama kamu</label>
+        <input class="modal-input" id="nameInput" type="text" maxlength="24" placeholder="contoh: raka.wav" autocomplete="nickname" />
+        <p class="input-error" id="nameError">Isi nama dulu supaya temanmu tahu kamu siapa.</p>
+        <div class="modal-actions"><button class="primary-button" id="createRoomButton">Buat room baru <i data-lucide="arrow-right"></i></button><button class="secondary-button" id="showJoinButton">Saya punya kode room</button></div>
+        <div class="join-form" id="joinForm"><label class="field-label" for="joinCodeInput">Kode room</label><div class="join-row"><input class="modal-input" id="joinCodeInput" type="text" maxlength="4" placeholder="7F3A" /><button class="primary-button" id="joinRoomButton">Join <i data-lucide="log-in"></i></button></div></div>
+        <p class="modal-footnote"><i data-lucide="shield-check"></i> Tidak ada akun. Nama ini hanya berlaku di room ini.</p>
+      </section>
+    </div>
+    <div class="modal-backdrop hidden" id="shareModal">
+      <section class="modal-card share-card" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+        <button class="close-modal" id="closeShareButton" aria-label="Close"><i data-lucide="x"></i></button>
+        <p class="eyebrow">INVITE YOUR PEOPLE</p><h2 id="shareTitle">Bring the room<br><em>to life.</em></h2>
+        <p class="modal-copy">Kirim kode atau link ini ke teman. Mereka bisa langsung masuk tanpa login.</p>
+        <div class="room-code-large" id="largeRoomCode">7F3A</div>
+        <div class="share-link-row"><input id="shareLink" readonly /><button class="primary-button" id="copyLinkButton" aria-label="Copy invite link"><i data-lucide="copy"></i></button></div>
+        <button class="secondary-button full-button" id="closeShareButton2">Done</button>
+      </section>
+    </div>
+    <div class="modal-backdrop hidden" id="viewerModal">
+      <section class="modal-card viewer-card" role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
+        <button class="close-modal" id="closeViewerButton" aria-label="Close"><i data-lucide="x"></i></button>
+        <p class="eyebrow">ROOM <span id="viewerRoomCode">7F3A</span></p><h2 id="viewerTitle">Watching<br><em>together.</em></h2>
+        <p class="modal-copy">Orang-orang yang sedang menonton di room ini.</p>
+        <div class="watching-list"><span class="watching-list-title">WATCHING NOW · <span id="viewerModalCount">0</span></span><div id="watchingList"></div></div>
+      </section>
+    </div>
+    <div class="modal-backdrop hidden" id="videoModal">
+      <section class="modal-card video-modal-card" role="dialog" aria-modal="true" aria-labelledby="videoTitle">
+        <button class="close-modal" id="closeVideoButton" aria-label="Close"><i data-lucide="x"></i></button>
+        <p class="eyebrow">ROOM QUEUE</p><h2 id="videoTitle">Add a video<br><em>to watch next.</em></h2>
+        <p class="modal-copy">Paste link YouTube yang mau ditonton bareng. Video akan masuk ke queue room.</p>
+        <label class="field-label" for="videoUrlInput">YouTube URL</label>
+        <input class="modal-input" id="videoUrlInput" type="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
+        <p class="input-error" id="videoError">Masukkan URL YouTube yang valid.</p>
+        <div class="modal-actions modal-actions-end"><button class="secondary-button" id="cancelVideoButton">Cancel</button><button class="primary-button" id="addVideoButton">Add to queue <i data-lucide="plus"></i></button></div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
