@@ -147,7 +147,8 @@ function connectRealtime() {
   const host = window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname;
   const realtimeUrl = window.RAMEIN_WS_URL || (window.location.hostname === 'localhost' ? `${protocol}://${host}:8765` : '');
   if (!realtimeUrl) {
-    showToast('Realtime backend belum dikonfigurasi');
+    $('#viewerCount').textContent = 'local mode';
+    document.querySelector('.online-count').lastChild.textContent = ' local mode';
     return;
   }
   socket = new WebSocket(realtimeUrl);
