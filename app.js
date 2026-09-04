@@ -38,7 +38,6 @@ let controlsHideTimer;
 function updatePlayButton() {
   const icon = isPlaying ? 'pause' : 'play';
   playButton.innerHTML = `<i data-lucide="${icon}"></i>`;
-  controlPlayButton.innerHTML = `<i data-lucide="${icon}"></i>`;
   lucide.createIcons();
 }
 
@@ -87,6 +86,13 @@ function selectVideo(videoId, notifyRoom = true) {
   if (notifyRoom) sendRealtime({ type: 'video_select', videoId });
 }
 
+function playNextVideo() {
+  const queue = Array.isArray(roomState.queue) ? roomState.queue : [];
+  const currentIndex = queue.indexOf(selectedVideoId);
+  const nextVideoId = currentIndex >= 0 ? queue[currentIndex + 1] : queue[0];
+  if (nextVideoId) selectVideo(nextVideoId);
+}
+
 function initYouTubePlayer() {
   if (ytPlayer || !selectedVideoId || !window.YT?.Player) return;
   ytPlayer = new YT.Player('videoPlayer', {
@@ -100,6 +106,10 @@ function initYouTubePlayer() {
       },
       onStateChange: (event) => {
         updateNowPlayingFromPlayer();
+        if (event.data === YT.PlayerState.ENDED) {
+          playNextVideo();
+          return;
+        }
         if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
           isPlaying = event.data === YT.PlayerState.PLAYING;
           updatePlayButton();
@@ -325,7 +335,6 @@ function setRemotePlayback(playing, position) {
 }
 
 const playButton = $('#playButton');
-const controlPlayButton = $('#controlPlayButton');
 function togglePlayback() {
   if (!selectedVideoId) return showToast('Pilih video dari queue terlebih dahulu');
   isPlaying = !isPlaying;
@@ -336,9 +345,13 @@ function togglePlayback() {
   showToast(isPlaying ? 'Playback dimulai untuk semua orang' : 'Playback dijeda untuk semua orang');
 }
 playButton.addEventListener('click', togglePlayback);
-controlPlayButton.addEventListener('click', togglePlayback);
+$('#fullscreenButton').addEventListener('click', async () => {
+  if (document.fullscreenElement) return document.exitFullscreen();
+  await $('#videoFrame').requestFullscreen?.();
+  showVideoControls();
+});
 $('#videoFrame').addEventListener('click', (event) => {
-  if (event.target.closest('#playButton, #controlPlayButton, #progressBar, .video-topline')) return;
+  if (event.target.closest('#playButton, #progressBar, .video-topline')) return;
   if (event.target.closest('.video-controls')) return;
   if ($('#videoFrame').classList.contains('controls-hidden')) {
     showVideoControls();
