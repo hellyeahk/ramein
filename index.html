@@ -106,9 +106,6 @@
     </div>
     <div class="toast" id="toast" role="status"></div>
     <script type="module">
-      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
-      import { getDatabase } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js';
-
       const firebaseConfig = {
         apiKey: "AIzaSyDuEpkc2Q7C76AydOGS3eWKK3iBkVWeG_A",
         authDomain: "ramein-37647.firebaseapp.com",
@@ -120,8 +117,7 @@
         measurementId: "G-0Y4KWDCJ8H"
       };
 
-      const app = initializeApp(firebaseConfig);
-      window.rameinDatabase = getDatabase(app);
+      window.rameinFirebaseConfig = firebaseConfig;
     </script>
     <script type="module" src="app.js"></script>
   </body>

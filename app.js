@@ -1,4 +1,8 @@
-import { limitToLast, onChildAdded, onDisconnect, onValue, push, query, ref, remove, runTransaction, set, update } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
+import { getDatabase, limitToLast, onChildAdded, onDisconnect, onValue, push, query, ref, runTransaction, set, update } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js';
+
+const firebaseApp = initializeApp(window.rameinFirebaseConfig);
+const firebaseDatabase = getDatabase(firebaseApp);
 
 const $ = (selector) => document.querySelector(selector);
 const toast = $('#toast');
@@ -147,7 +151,7 @@ function clearQueueView() {
 }
 
 function connectRealtime() {
-  const database = window.rameinDatabase;
+  const database = firebaseDatabase;
   if (!database) {
     $('#viewerCount').textContent = 'local mode';
     document.querySelector('.online-count').lastChild.textContent = ' local mode';
