@@ -31,6 +31,7 @@
 }
 .typing-indicator{min-height:16px;margin:0;color:var(--dim);font:500 9px 'DM Mono',monospace}
 .chat-feed{scrollbar-width:thin;scrollbar-color:#59634a transparent}
+.chat-mention{padding:1px 4px;background:#39451f;color:var(--accent);border-radius:4px;font:600 11px 'DM Mono',monospace}
 .chat-feed::-webkit-scrollbar{width:6px}
 .chat-feed::-webkit-scrollbar-track{background:transparent}
 .chat-feed::-webkit-scrollbar-thumb{background:#59634a;border-radius:8px;border:1px solid var(--panel)}

@@ -203,7 +203,18 @@ function appendChatMessage(name, message, media = {}, authorId = '') {
   bubble.innerHTML = `<span class="avatar avatar-you"></span><div><div class="name-line"><strong></strong>${adminBadge}<time>now</time></div><p></p><div class="chat-media"></div></div>`;
   bubble.querySelector('.avatar').textContent = name.slice(0, 1).toUpperCase();
   bubble.querySelector('strong').textContent = name;
-  bubble.querySelector('p').textContent = message;
+  const messageText = bubble.querySelector('p');
+  const mentionParts = String(message || '').split(/(\s@[a-zA-Z0-9._-]+)/g);
+  mentionParts.forEach((part) => {
+    if (/^\s@[a-zA-Z0-9._-]+$/.test(part)) {
+      const mention = document.createElement('mark');
+      mention.className = 'chat-mention';
+      mention.textContent = part;
+      messageText.append(mention);
+    } else {
+      messageText.append(document.createTextNode(part));
+    }
+  });
   if (media.type === 'photo' && media.url) bubble.querySelector('.chat-media').innerHTML = `<img src="${media.url}" alt="Photo from ${name}">`;
   if (media.type === 'voice' && media.url) {
     const mediaContainer = bubble.querySelector('.chat-media');
@@ -358,15 +369,18 @@ function connectRealtime() {
   });
   onValue(ref(roomRef, 'events'), (snapshot) => {
     const currentChatEventIds = new Set();
+    const chatMessages = [];
     clearChatView();
     snapshot.forEach((messageSnapshot) => {
       const message = messageSnapshot.val();
       if (message?.type !== 'chat' && message?.type !== 'reaction') return;
       currentChatEventIds.add(messageSnapshot.key);
-      if (message.type === 'chat') appendChatMessage(message.name, message.message, message.media, message.clientId);
+      if (message.type === 'chat') chatMessages.push({ key: messageSnapshot.key, message });
       if (message.type === 'reaction' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.clientId !== clientId) showFloatingReaction(message.message);
       if (message.type === 'chat' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.name !== userName) playNotificationSound();
     });
+    chatMessages.sort((left, right) => (Number(left.message.createdAt) || 0) - (Number(right.message.createdAt) || 0) || left.key.localeCompare(right.key));
+    chatMessages.forEach(({ message }) => appendChatMessage(message.name, message.message, message.media, message.clientId));
     knownChatEventIds = currentChatEventIds;
     chatEventsInitialized = true;
   });
