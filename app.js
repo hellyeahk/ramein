@@ -20,8 +20,8 @@ const welcomeModal = $('#welcomeModal');
 const joinForm = $('#joinForm');
 const nameInput = $('#nameInput');
 const joinCodeInput = $('#joinCodeInput');
-const roomFromUrl = window.location.hash.match(/room-([a-z0-9]{4})/i)?.[1]?.toUpperCase();
-let roomCode = roomFromUrl || '7F3A';
+const initialRoomFromUrl = window.location.hash.match(/room-([a-z0-9]{4})/i)?.[1]?.toUpperCase();
+let roomCode = initialRoomFromUrl || '7F3A';
 let userName = sessionStorage.getItem('ramein-name');
 let roomRef;
 let presenceRef;
@@ -347,6 +347,10 @@ function leaveRoom(force = false, silent = false) {
   currentPresencePeople = [];
   presenceInitialized = false;
   roomCode = '';
+  $('#createRoomButton').innerHTML = 'Buat room baru <i data-lucide="arrow-right"></i>';
+  $('#showJoinButton').classList.remove('hidden');
+  joinForm.classList.remove('visible');
+  lucide.createIcons();
   $('#viewerModal').classList.add('hidden');
   welcomeModal.classList.remove('hidden');
   $('#viewerCount').textContent = 'connecting...';
@@ -460,10 +464,10 @@ if (userName) {
   nameInput.value = userName;
   $('#profileButton').textContent = userName.slice(0, 1).toUpperCase();
 }
-if (userName && roomFromUrl) enterRoom(roomCode);
+if (userName && initialRoomFromUrl) enterRoom(roomCode);
 else nameInput.focus();
 
-if (roomFromUrl) {
+if (initialRoomFromUrl) {
   $('#createRoomButton').innerHTML = 'Join room <i data-lucide="log-in"></i>';
   $('#showJoinButton').classList.add('hidden');
   joinForm.classList.remove('visible');
@@ -472,8 +476,8 @@ if (roomFromUrl) {
 
 $('#createRoomButton').addEventListener('click', () => {
   if (!validateName()) return;
-  const destinationRoom = roomFromUrl || Math.random().toString(36).slice(2, 6).toUpperCase();
-  enterRoom(destinationRoom, !roomFromUrl);
+  const destinationRoom = Math.random().toString(36).slice(2, 6).toUpperCase();
+  enterRoom(destinationRoom, true);
   showToast(`Room ${roomCode} berhasil dibuat`);
 });
 
