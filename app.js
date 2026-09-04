@@ -37,6 +37,7 @@ if (!clientId) {
 let typingTimer;
 let knownPresenceIds = new Set();
 let knownPresenceNames = new Map();
+let knownChatEventIds = new Set();
 let currentPresencePeople = [];
 let presenceInitialized = false;
 let isPageUnloading = false;
@@ -48,6 +49,8 @@ let suppressPlaybackUntil = 0;
 let selectedVideoId = null;
 let controlsHideTimer;
 let needsAudioResume = false;
+let chatEventsInitialized = false;
+const notificationSound = $('#notificationSound');
 
 function updatePlayButton() {
   const icon = isPlaying ? 'pause' : 'play';
@@ -166,6 +169,12 @@ function initYouTubePlayer() {
 
 window.onYouTubeIframeAPIReady = initYouTubePlayer;
 if (window.YT?.Player) setTimeout(initYouTubePlayer, 0);
+
+function playNotificationSound() {
+  if (!notificationSound) return;
+  notificationSound.currentTime = 0;
+  notificationSound.play().catch(() => {});
+}
 
 function appendChatMessage(name, message, media = {}) {
   $('.chat-empty')?.remove();
@@ -290,11 +299,17 @@ function connectRealtime() {
     if (roomState.lastActor !== clientId) setRemotePlayback(roomState.playing, roomState.position);
   });
   onValue(query(ref(roomRef, 'events'), limitToLast(50)), (snapshot) => {
+    const currentChatEventIds = new Set();
     clearChatView();
     snapshot.forEach((messageSnapshot) => {
       const message = messageSnapshot.val();
-      if (message?.type === 'chat') appendChatMessage(message.name, message.message, message.media);
+      if (message?.type !== 'chat') return;
+      currentChatEventIds.add(messageSnapshot.key);
+      appendChatMessage(message.name, message.message, message.media);
+      if (chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.name !== userName) playNotificationSound();
     });
+    knownChatEventIds = currentChatEventIds;
+    chatEventsInitialized = true;
   });
   $('#viewerCount').textContent = 'connected';
   document.querySelector('.online-count').lastChild.textContent = ' connected';
@@ -327,6 +342,8 @@ function leaveRoom(force = false, silent = false) {
   presenceRef = null;
   knownPresenceIds = new Set();
   knownPresenceNames = new Map();
+  knownChatEventIds = new Set();
+  chatEventsInitialized = false;
   currentPresencePeople = [];
   presenceInitialized = false;
   roomCode = '';
@@ -529,10 +546,6 @@ $('#fullscreenButton').addEventListener('click', async () => {
 $('#videoFrame').addEventListener('click', (event) => {
   if (event.target.closest('#playButton, #progressBar, .video-topline')) return;
   if (event.target.closest('.video-controls')) return;
-  if ($('#videoFrame').classList.contains('controls-hidden')) {
-    showVideoControls();
-    return;
-  }
   togglePlayback();
 });
 

@@ -24,6 +24,7 @@
 .chat-feed::-webkit-scrollbar-track{background:transparent}
 .chat-feed::-webkit-scrollbar-thumb{background:#59634a;border-radius:8px;border:1px solid var(--panel)}
 .video-frame.controls-hidden .video-topline,.video-frame.controls-hidden .video-controls,.video-frame.controls-hidden .video-overlay{opacity:0;pointer-events:none;transition:opacity .25s ease}
+.video-frame.controls-hidden:hover .video-topline,.video-frame.controls-hidden:hover .video-controls,.video-frame.controls-hidden:hover .video-overlay{opacity:1;pointer-events:auto}
 .video-frame .video-topline,.video-frame .video-controls,.video-frame .video-overlay{transition:opacity .25s ease}
 .video-controls .skip-button{position:relative;width:30px!important;height:26px!important;background:#2a2d2d!important;color:var(--ink)!important;border-radius:5px!important}
 .video-controls .skip-button svg{width:15px!important;fill:none!important}
