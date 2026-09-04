@@ -26,9 +26,14 @@ let userName = sessionStorage.getItem('ramein-name');
 let roomRef;
 let presenceRef;
 let roomState = {};
-let clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let clientId = sessionStorage.getItem('ramein-client-id');
+if (!clientId) {
+  clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  sessionStorage.setItem('ramein-client-id', clientId);
+}
 let typingTimer;
 let knownPresenceIds = new Set();
+let knownPresenceNames = new Map();
 let presenceInitialized = false;
 let isPageUnloading = false;
 let isPlaying = false;
@@ -218,10 +223,11 @@ function connectRealtime() {
   roomRef = ref(database, `rooms/${roomCode}`);
   suppressPlaybackUntil = Date.now() + 3000;
   knownPresenceIds = new Set();
+  knownPresenceNames = new Map();
   presenceInitialized = false;
   presenceRef = ref(roomRef, `presence/${clientId}`);
-  set(presenceRef, { name: userName || 'Guest', isTyping: false });
   onDisconnect(presenceRef).remove();
+  set(presenceRef, { name: userName || 'Guest', isTyping: false });
   onValue(ref(roomRef, 'presence'), (snapshot) => {
     const presence = snapshot.val() || {};
     const presenceEntries = Object.entries(presence);
@@ -230,8 +236,12 @@ function connectRealtime() {
       presenceEntries.forEach(([id, person]) => {
         if (id !== clientId && !knownPresenceIds.has(id)) showToast(`${person.name || 'Seseorang'} masuk ke room`);
       });
+      knownPresenceIds.forEach((id) => {
+        if (id !== clientId && !currentPresenceIds.has(id)) showToast(`${knownPresenceNames.get(id) || 'Seseorang'} keluar dari room`);
+      });
     }
     knownPresenceIds = currentPresenceIds;
+    knownPresenceNames = new Map(presenceEntries.map(([id, person]) => [id, person.name || 'Seseorang']));
     presenceInitialized = true;
     const viewers = presenceEntries.map(([, person]) => person.name).filter(Boolean);
     const typingNames = presenceEntries
@@ -287,6 +297,7 @@ function leaveRoom() {
   roomRef = null;
   presenceRef = null;
   knownPresenceIds = new Set();
+  knownPresenceNames = new Map();
   presenceInitialized = false;
   roomCode = '';
   $('#viewerModal').classList.add('hidden');
