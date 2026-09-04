@@ -204,9 +204,9 @@ function appendChatMessage(name, message, media = {}, authorId = '') {
   bubble.querySelector('.avatar').textContent = name.slice(0, 1).toUpperCase();
   bubble.querySelector('strong').textContent = name;
   const messageText = bubble.querySelector('p');
-  const mentionParts = String(message || '').split(/(\s@[a-zA-Z0-9._-]+)/g);
+  const mentionParts = String(message || '').split(/(@[a-zA-Z0-9._-]+)/g);
   mentionParts.forEach((part) => {
-    if (/^\s@[a-zA-Z0-9._-]+$/.test(part)) {
+    if (/^@[a-zA-Z0-9._-]+$/.test(part)) {
       const mention = document.createElement('mark');
       mention.className = 'chat-mention';
       mention.textContent = part;

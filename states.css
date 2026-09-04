@@ -71,7 +71,7 @@ input[type="text"],input[type="url"]{cursor:text}
 .mention-suggestions.hidden{display:none}
 .mention-option{padding:8px 10px;background:transparent;color:var(--muted);font-size:11px;text-align:left}
 .mention-option:hover{background:#34382b;color:var(--accent)}
-.mentioned-user{animation:mention-shake .55s ease-in-out 2;border-left:2px solid var(--accent);padding-left:8px}
+.mentioned-user{animation:mention-shake .55s ease-in-out 2}
 @keyframes mention-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .attachment-preview{display:flex;align-items:center;gap:6px;min-width:0;flex:0 0 100%;order:-1;padding:6px 8px;background:#303329;color:var(--muted);border-radius:8px;font-size:10px}
 .attachment-preview.hidden{display:none}
