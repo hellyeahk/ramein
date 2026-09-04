@@ -191,12 +191,13 @@ function formatAudioTime(seconds) {
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
 }
 
-function appendChatMessage(name, message, media = {}) {
+function appendChatMessage(name, message, media = {}, authorId = '') {
   $('.chat-empty')?.remove();
   const bubble = document.createElement('div');
   bubble.className = 'chat-message';
   bubble.dataset.author = name;
-  bubble.innerHTML = `<span class="avatar avatar-you"></span><div><div class="name-line"><strong></strong><time>now</time></div><p></p><div class="chat-media"></div></div>`;
+  const adminBadge = authorId && authorId === roomState.hostId ? '<span class="admin-badge">ADMIN</span>' : '';
+  bubble.innerHTML = `<span class="avatar avatar-you"></span><div><div class="name-line"><strong></strong>${adminBadge}<time>now</time></div><p></p><div class="chat-media"></div></div>`;
   bubble.querySelector('.avatar').textContent = name.slice(0, 1).toUpperCase();
   bubble.querySelector('strong').textContent = name;
   bubble.querySelector('p').textContent = message;
@@ -359,7 +360,7 @@ function connectRealtime() {
       const message = messageSnapshot.val();
       if (message?.type !== 'chat' && message?.type !== 'reaction') return;
       currentChatEventIds.add(messageSnapshot.key);
-      if (message.type === 'chat') appendChatMessage(message.name, message.message, message.media);
+      if (message.type === 'chat') appendChatMessage(message.name, message.message, message.media, message.clientId);
       if (message.type === 'reaction' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.clientId !== clientId) showFloatingReaction(message.message);
       if (message.type === 'chat' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.name !== userName) playNotificationSound();
     });
