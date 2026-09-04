@@ -353,7 +353,7 @@ function connectRealtime() {
       else if (!roomState.currentVideoId && selectedVideoId) showEmptyVideoState();
     if (roomState.lastActor !== clientId) setRemotePlayback(roomState.playing, roomState.position);
   });
-  onValue(query(ref(roomRef, 'events'), limitToLast(50)), (snapshot) => {
+  onValue(ref(roomRef, 'events'), (snapshot) => {
     const currentChatEventIds = new Set();
     clearChatView();
     snapshot.forEach((messageSnapshot) => {
@@ -818,9 +818,33 @@ $('#voiceButton').addEventListener('click', async () => {
 messageInput.addEventListener('input', () => {
   if (!presenceRef) return;
   presenceRef.update({ isTyping: messageInput.value.trim().length > 0 });
+  updateMentionSuggestions();
   clearTimeout(typingTimer);
   if (messageInput.value.trim()) typingTimer = setTimeout(() => presenceRef?.update({ isTyping: false }), 1000);
 });
+
+function updateMentionSuggestions() {
+  const match = messageInput.value.match(/(?:^|\s)@([^\s]*)$/);
+  const menu = $('#mentionSuggestions');
+  if (!match) return menu.classList.add('hidden');
+  const search = match[1].toLowerCase();
+  const matches = currentPresencePeople.filter((person) => person.name?.toLowerCase().startsWith(search));
+  menu.innerHTML = '';
+  matches.forEach((person) => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'mention-option';
+    option.textContent = `@${person.name}`;
+    option.addEventListener('click', () => {
+      messageInput.value = messageInput.value.replace(/(?:^|\s)@[^\s]*$/, (prefix) => `${prefix.startsWith(' ') ? ' ' : ''}@${person.name} `);
+      menu.classList.add('hidden');
+      messageInput.focus();
+    });
+    menu.append(option);
+  });
+  menu.classList.toggle('hidden', !matches.length);
+}
+
 messageForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const message = messageInput.value.trim();
