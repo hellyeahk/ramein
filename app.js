@@ -136,6 +136,11 @@ function appendChatMessage(name, message) {
   $('#chatFeed').scrollTop = $('#chatFeed').scrollHeight;
 }
 
+function clearChatView() {
+  $('#chatFeed').innerHTML = '<div class="empty-state chat-empty"><i data-lucide="message-circle"></i><strong>Belum ada chat</strong><span>Jadilah yang pertama menyapa room ini.</span></div>';
+  lucide.createIcons();
+}
+
 function showEmptyVideoState() {
   selectedVideoId = null;
   isPlaying = false;
@@ -212,11 +217,6 @@ function connectRealtime() {
     const message = snapshot.val();
     if (!message) return;
     if (message.type === 'chat') appendChatMessage(message.name, message.message);
-    if (message.type === 'reaction') {
-      const button = document.querySelector(`[data-reaction="${message.emoji}"]`);
-      const count = button?.querySelector('span');
-      if (count) count.textContent = Number(count.textContent) + 1;
-    }
   });
   $('#viewerCount').textContent = 'connected';
   document.querySelector('.online-count').lastChild.textContent = ' connected';
@@ -230,6 +230,12 @@ function leaveRoom() {
   presenceRef?.remove();
   roomRef?.off();
   presenceRef?.off();
+  ytPlayer?.pauseVideo?.();
+  clearTimeout(controlsHideTimer);
+  showEmptyVideoState();
+  clearQueueView();
+  clearChatView();
+  roomState = {};
   roomRef = null;
   presenceRef = null;
   $('#viewerModal').classList.add('hidden');
@@ -269,6 +275,9 @@ function sendRealtime(message) {
 }
 
 function enterRoom(code) {
+  roomRef?.off();
+  presenceRef?.off();
+  clearChatView();
   roomCode = code.toUpperCase();
   roomCodeElement.textContent = roomCode;
   $('#largeRoomCode').textContent = roomCode;
