@@ -38,6 +38,7 @@ let syncingRemotePlayback = false;
 let suppressPlaybackUntil = 0;
 let selectedVideoId = null;
 let controlsHideTimer;
+let needsAudioResume = false;
 
 function updatePlayButton() {
   const icon = isPlaying ? 'pause' : 'play';
@@ -123,6 +124,7 @@ function initYouTubePlayer() {
   if (ytPlayer || !selectedVideoId || !window.YT?.Player) return;
   ytPlayer = new YT.Player('videoPlayer', {
     videoId: selectedVideoId,
+    playerVars: { autoplay: 0, controls: 0, enablejsapi: 1, origin: window.location.origin },
     events: {
       onReady: (event) => {
         ytPlayer = event.target;
@@ -276,6 +278,7 @@ function leaveRoom() {
   roomRef?.off();
   presenceRef?.off();
   ytPlayer?.pauseVideo?.();
+  needsAudioResume = false;
   clearTimeout(controlsHideTimer);
   showEmptyVideoState();
   clearQueueView();
@@ -409,11 +412,27 @@ function setRemotePlayback(playing, position) {
   suppressPlaybackUntil = Date.now() + 1500;
   syncingRemotePlayback = true;
   ytPlayer.seekTo(Number(position) || 0, true);
-  if (playing) ytPlayer.playVideo();
-  else ytPlayer.pauseVideo();
+  if (playing) {
+    ytPlayer.mute();
+    ytPlayer.playVideo();
+    needsAudioResume = true;
+  }
+    else {
+      ytPlayer.pauseVideo();
+      needsAudioResume = false;
+    }
   sendYouTubeCommand(playing ? 'playVideo' : 'pauseVideo');
   setTimeout(() => { syncingRemotePlayback = false; }, 700);
 }
+
+function resumeAudioAfterInteraction() {
+  if (!needsAudioResume || !ytPlayer) return;
+  ytPlayer.unMute();
+  needsAudioResume = false;
+}
+
+document.addEventListener('pointerdown', resumeAudioAfterInteraction, { once: false });
+document.addEventListener('keydown', resumeAudioAfterInteraction, { once: false });
 
 const playButton = $('#playButton');
 function togglePlayback() {
@@ -424,6 +443,7 @@ function togglePlayback() {
   sendPlaybackState();
   updatePlayButton();
   showToast(isPlaying ? 'Playback dimulai untuk semua orang' : 'Playback dijeda untuk semua orang');
+    needsAudioResume = false;
 }
 playButton.addEventListener('click', togglePlayback);
 $('#fullscreenButton').addEventListener('click', async () => {
