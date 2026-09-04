@@ -186,7 +186,37 @@ function appendChatMessage(name, message, media = {}) {
   bubble.querySelector('strong').textContent = name;
   bubble.querySelector('p').textContent = message;
   if (media.type === 'photo' && media.url) bubble.querySelector('.chat-media').innerHTML = `<img src="${media.url}" alt="Photo from ${name}">`;
-  if (media.type === 'voice' && media.url) bubble.querySelector('.chat-media').innerHTML = `<audio controls src="${media.url}"></audio>`;
+  if (media.type === 'voice' && media.url) {
+    const mediaContainer = bubble.querySelector('.chat-media');
+    const player = document.createElement('div');
+    player.className = 'voice-player';
+    player.innerHTML = '<button class="voice-play" type="button" aria-label="Play voice note"><i data-lucide="play"></i></button><div class="voice-wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="voice-time">0:00</span>';
+    const audio = document.createElement('audio');
+    audio.src = media.url;
+    audio.preload = 'metadata';
+    audio.controlsList = 'nodownload';
+    audio.addEventListener('contextmenu', (event) => event.preventDefault());
+    const playButton = player.querySelector('.voice-play');
+    const timeLabel = player.querySelector('.voice-time');
+    playButton.addEventListener('click', () => audio.paused ? audio.play() : audio.pause());
+    audio.addEventListener('play', () => {
+      playButton.innerHTML = '<i data-lucide="pause"></i>';
+      player.classList.add('playing');
+      lucide.createIcons();
+    });
+    audio.addEventListener('pause', () => {
+      playButton.innerHTML = '<i data-lucide="play"></i>';
+      player.classList.remove('playing');
+      lucide.createIcons();
+    });
+    audio.addEventListener('timeupdate', () => {
+      const seconds = Math.floor(audio.currentTime || 0);
+      timeLabel.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    });
+    player.append(audio);
+    mediaContainer.append(player);
+    lucide.createIcons();
+  }
   $('#chatFeed').append(bubble);
   $('#chatFeed').scrollTop = $('#chatFeed').scrollHeight;
 }
@@ -691,6 +721,14 @@ const messageInput = $('#messageInput');
 const photoInput = $('#photoInput');
 let pendingMedia = null;
 let recording = false;
+function setRecordingState(active) {
+  recording = active;
+  $('#messageForm').classList.toggle('recording', active);
+  $('#messageInput').classList.toggle('hidden', active);
+  $('#recordingSpectrum').classList.toggle('hidden', !active);
+  $('#voiceButton').classList.toggle('recording', active);
+}
+
 function attachMedia(file, type) {
   if (!file) return;
   clearAttachment();
@@ -738,13 +776,11 @@ $('#voiceButton').addEventListener('click', async () => {
     const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
     const mimeType = mimeTypes.find((type) => MediaRecorder.isTypeSupported(type));
     mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-    recording = true;
-    $('#voiceButton').classList.add('recording');
+    setRecordingState(true);
     mediaRecorder.addEventListener('dataavailable', (event) => voiceChunks.push(event.data));
     mediaRecorder.addEventListener('stop', () => {
       stream.getTracks().forEach((track) => track.stop());
-      recording = false;
-      $('#voiceButton').classList.remove('recording');
+      setRecordingState(false);
       attachMedia(new Blob(voiceChunks, { type: mediaRecorder.mimeType || mimeType || 'audio/webm' }), 'voice');
     }, { once: true });
     mediaRecorder.start();
