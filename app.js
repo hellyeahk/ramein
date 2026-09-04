@@ -29,6 +29,8 @@ let presenceRef;
 let roomState = {};
 let clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let typingTimer;
+let knownPresenceIds = new Set();
+let presenceInitialized = false;
 let isPlaying = false;
 let ytPlayer;
 let autoplayOnReady = false;
@@ -210,12 +212,22 @@ function connectRealtime() {
   }
   roomRef = ref(database, `rooms/${roomCode}`);
   suppressPlaybackUntil = Date.now() + 3000;
+  knownPresenceIds = new Set();
+  presenceInitialized = false;
   presenceRef = ref(roomRef, `presence/${clientId}`);
   set(presenceRef, { name: userName || 'Guest', isTyping: false });
   onDisconnect(presenceRef).remove();
   onValue(ref(roomRef, 'presence'), (snapshot) => {
     const presence = snapshot.val() || {};
     const presenceEntries = Object.entries(presence);
+    const currentPresenceIds = new Set(presenceEntries.map(([id]) => id));
+    if (presenceInitialized) {
+      presenceEntries.forEach(([id, person]) => {
+        if (id !== clientId && !knownPresenceIds.has(id)) showToast(`${person.name || 'Seseorang'} masuk ke room`);
+      });
+    }
+    knownPresenceIds = currentPresenceIds;
+    presenceInitialized = true;
     const viewers = presenceEntries.map(([, person]) => person.name).filter(Boolean);
     const typingNames = presenceEntries
       .filter(([id, person]) => id !== clientId && person.isTyping)
@@ -266,6 +278,8 @@ function leaveRoom() {
   roomState = {};
   roomRef = null;
   presenceRef = null;
+  knownPresenceIds = new Set();
+  presenceInitialized = false;
   roomCode = '';
   $('#viewerModal').classList.add('hidden');
   welcomeModal.classList.remove('hidden');
