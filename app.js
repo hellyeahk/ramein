@@ -176,6 +176,16 @@ function playNotificationSound() {
   notificationSound.play().catch(() => {});
 }
 
+function showFloatingReaction(emoji) {
+  const reaction = document.createElement('span');
+  reaction.className = 'floating-reaction';
+  reaction.textContent = emoji;
+  reaction.style.left = `${18 + Math.random() * 64}%`;
+  reaction.style.setProperty('--reaction-drift', `${(Math.random() - 0.5) * 70}px`);
+  reaction.addEventListener('animationend', () => reaction.remove(), { once: true });
+  $('#reactionOverlay').append(reaction);
+}
+
 function formatAudioTime(seconds) {
   const value = Math.max(0, Math.floor(Number(seconds) || 0));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
@@ -346,9 +356,10 @@ function connectRealtime() {
     clearChatView();
     snapshot.forEach((messageSnapshot) => {
       const message = messageSnapshot.val();
-      if (message?.type !== 'chat') return;
+      if (message?.type !== 'chat' && message?.type !== 'reaction') return;
       currentChatEventIds.add(messageSnapshot.key);
-      appendChatMessage(message.name, message.message, message.media);
+      if (message.type === 'chat') appendChatMessage(message.name, message.message, message.media);
+      if (message.type === 'reaction' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key)) showFloatingReaction(message.message);
       if (chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.name !== userName) playNotificationSound();
     });
     knownChatEventIds = currentChatEventIds;
@@ -824,7 +835,7 @@ messageForm.addEventListener('submit', (event) => {
 
 document.querySelectorAll('.reaction').forEach((button) => {
   button.addEventListener('click', () => {
-    if (!sendRealtime({ type: 'chat', message: button.dataset.reaction })) return showToast('Belum terhubung ke room');
+    if (!sendRealtime({ type: 'reaction', message: button.dataset.reaction })) return showToast('Belum terhubung ke room');
     showToast(`${button.dataset.reaction} dikirim ke room`);
   });
 });

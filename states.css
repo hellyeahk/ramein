@@ -25,6 +25,7 @@
   .message-form input{font-size:16px;line-height:1.3}
   .message-form button{width:34px;height:34px}
   .chat-note{display:none}
+  .reaction-bar{margin-bottom:78px}
 }
 .typing-indicator{min-height:16px;margin:0;color:var(--dim);font:500 9px 'DM Mono',monospace}
 .chat-feed{scrollbar-width:thin;scrollbar-color:#59634a transparent}
@@ -34,6 +35,9 @@
 .video-frame.controls-hidden .video-topline,.video-frame.controls-hidden .video-controls,.video-frame.controls-hidden .video-overlay{opacity:0;pointer-events:none;transition:opacity .25s ease}
 .video-frame.controls-hidden:hover .video-topline,.video-frame.controls-hidden:hover .video-controls,.video-frame.controls-hidden:hover .video-overlay{opacity:1;pointer-events:auto}
 .video-frame .video-topline,.video-frame .video-controls,.video-frame .video-overlay{transition:opacity .25s ease}
+.reaction-overlay{position:absolute;z-index:5;inset:0;overflow:hidden;pointer-events:none}
+.floating-reaction{position:absolute;bottom:22%;font-size:clamp(28px,5vw,52px);line-height:1;filter:drop-shadow(0 5px 8px #0008);animation:float-reaction 2.2s ease-out forwards}
+@keyframes float-reaction{0%{opacity:0;transform:translate3d(0,20px,0) scale(.65)}15%{opacity:1;transform:translate3d(0,0,0) scale(1)}100%{opacity:0;transform:translate3d(var(--reaction-drift),-260px,0) scale(1.15)}}
 .video-controls .skip-button{position:relative;width:30px!important;height:26px!important;background:#2a2d2d!important;color:var(--ink)!important;border-radius:5px!important}
 .video-controls .skip-button svg{width:15px!important;fill:none!important}
 .video-controls .skip-button span{position:absolute;font:700 8px 'DM Mono',monospace}
