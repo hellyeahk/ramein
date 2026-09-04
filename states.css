@@ -34,6 +34,10 @@ input[type="text"],input[type="url"]{cursor:text}
 .kick-button{display:grid;place-items:center;width:25px;height:25px;margin-left:5px;background:transparent;color:var(--dim);cursor:pointer}
 .kick-button:hover{color:#ff929a}
 .kick-button svg{width:14px}
+.queue-heading-actions{display:flex;align-items:center;gap:10px}
+.queue-menu-button{display:none}
+.toast{display:flex;align-items:center;gap:9px;padding:11px 15px;border:1px solid #52652b;background:#20251a;color:var(--ink);box-shadow:0 12px 35px #0008;border-radius:4px;font:600 11px Manrope,sans-serif}
+@media(max-width:900px){.queue-heading-actions{gap:6px}.queue-menu-button{display:grid}.queue-list{display:none}.queue-list.queue-open{display:block}.queue-list.queue-open .empty-state{display:flex}}
 .modal-backdrop#welcomeModal{place-items:start center;padding:0;background:var(--bg);backdrop-filter:none;overflow:hidden}
 .welcome-card{width:min(100%,760px);height:100dvh;min-height:0;display:flex;flex-direction:column;justify-content:center;background:transparent;border:0;padding:28px clamp(20px,7vw,92px);box-shadow:none}
 .welcome-card .modal-brand{margin-bottom:clamp(28px,6vh,54px)}

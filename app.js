@@ -240,6 +240,12 @@ function connectRealtime() {
   onDisconnect(presenceRef).remove();
   if (isHost) update(ref(roomRef, 'state'), { hostId: clientId });
   set(presenceRef, { name: userName || 'Guest', isTyping: false });
+  onValue(ref(roomRef, `kicked/${clientId}`), (snapshot) => {
+    if (!snapshot.val()) return;
+    set(ref(roomRef, `kicked/${clientId}`), null);
+    showToast('Kamu telah dikeluarkan dari room');
+    leaveRoom(true);
+  });
   onValue(ref(roomRef, 'presence'), (snapshot) => {
     const presence = snapshot.val() || {};
     const presenceEntries = Object.entries(presence);
@@ -299,12 +305,13 @@ function connectRealtime() {
 function kickViewer(viewerId, viewerName) {
   if (!isHost || viewerId === clientId) return;
   if (!window.confirm(`Keluarkan ${viewerName} dari room?`)) return;
+  set(ref(roomRef, `kicked/${viewerId}`), true);
   ref(roomRef, `presence/${viewerId}`).remove();
   showToast(`${viewerName} dikeluarkan dari room`);
 }
 
-function leaveRoom() {
-  if (!window.confirm('Keluar dari room ini?')) return;
+function leaveRoom(force = false) {
+  if (!force && !window.confirm('Keluar dari room ini?')) return;
   clearTimeout(typingTimer);
   presenceRef?.update({ isTyping: false });
   presenceRef?.remove();
@@ -381,7 +388,8 @@ async function sendMediaMessage(file, type) {
     showToast(type === 'photo' ? 'Mengunggah foto...' : 'Mengunggah voice note...');
     await fileRef.put(file);
     const url = await fileRef.getDownloadURL();
-    sendRealtime({ type: 'chat', message: type === 'photo' ? '📷 Foto' : '🎙️ Voice note', media: { type, url } });
+    await push(ref(roomRef, 'events'), { type: 'chat', message: type === 'photo' ? '📷 Foto' : '🎙️ Voice note', media: { type, url }, name: userName || 'Guest', createdAt: Date.now() });
+    showToast(type === 'photo' ? 'Foto terkirim' : 'Voice note terkirim');
   } catch {
     showToast('Media gagal dikirim');
   }
@@ -533,6 +541,7 @@ $('#closeShareButton').addEventListener('click', () => $('#shareModal').classLis
 $('#closeShareButton2').addEventListener('click', () => $('#shareModal').classList.add('hidden'));
 $('#closeViewerButton').addEventListener('click', () => $('#viewerModal').classList.add('hidden'));
 $('#leaveRoomButton').addEventListener('click', leaveRoom);
+$('#queueMenuButton').addEventListener('click', () => $('#queueList').classList.toggle('queue-open'));
 $('#copyLinkButton').addEventListener('click', async () => {
   const roomLink = $('#shareLink').value;
   try {
