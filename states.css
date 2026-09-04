@@ -7,8 +7,8 @@
   .topbar{position:relative;z-index:90}
   .workspace{min-height:0;overflow:hidden}
   .workspace{gap:8px}
-  .chat-panel{height:520px;min-height:520px;position:static;padding-bottom:92px}
-  .chat-feed{padding-bottom:34px}
+  .chat-panel{height:520px;min-height:520px;position:static;padding-bottom:130px}
+  .chat-feed{padding-bottom:100px;scroll-padding-bottom:100px}
   .message-form{
     position:fixed;
     left:10px;
