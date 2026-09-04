@@ -401,7 +401,7 @@ function sendRealtime(message) {
   return false;
 }
 
-async function sendMediaMessage(file, type) {
+async function sendMediaMessage(file, type, message = '') {
   if (!roomRef || !file) return;
   const safeName = (file.name || (type === 'voice' ? 'voice-note.webm' : 'photo')).replace(/[^a-zA-Z0-9._-]/g, '_');
   const filename = `rooms/${roomCode}/media/${clientId}-${Date.now()}-${safeName}`;
@@ -414,7 +414,7 @@ async function sendMediaMessage(file, type) {
     });
     if (!uploadResponse.ok) throw new Error('Upload failed');
     const { url } = await uploadResponse.json();
-    await push(ref(roomRef, 'events'), { type: 'chat', message: type === 'photo' ? '📷 Foto' : '🎙️ Voice note', media: { type, url }, name: userName || 'Guest', createdAt: Date.now() });
+    await push(ref(roomRef, 'events'), { type: 'chat', message: message || (type === 'photo' ? '📷 Foto' : '🎙️ Voice note'), media: { type, url }, name: userName || 'Guest', createdAt: Date.now() });
     showToast(type === 'photo' ? 'Foto terkirim' : 'Voice note terkirim');
   } catch {
     showToast('Media gagal dikirim');
@@ -422,12 +422,24 @@ async function sendMediaMessage(file, type) {
 }
 
 function changeName() {
-  const nextName = window.prompt('Nama baru', userName || 'Guest')?.trim().slice(0, 24);
-  if (!nextName) return;
+  $('#renameInput').value = userName || '';
+  $('#renameError').classList.remove('visible');
+  $('#nameModal').classList.remove('hidden');
+  $('#renameInput').focus();
+}
+
+function saveName() {
+  const nextName = $('#renameInput').value.trim().slice(0, 24);
+  if (!nextName) {
+    $('#renameError').classList.add('visible');
+    $('#renameInput').focus();
+    return;
+  }
   userName = nextName;
   sessionStorage.setItem('ramein-name', userName);
   $('#profileButton').textContent = userName.slice(0, 1).toUpperCase();
   presenceRef?.update({ name: userName });
+  $('#nameModal').classList.add('hidden');
   showToast('Nama berhasil diubah');
 }
 
@@ -677,12 +689,36 @@ $('#clearQueue').addEventListener('click', () => {
 const messageForm = $('#messageForm');
 const messageInput = $('#messageInput');
 const photoInput = $('#photoInput');
+let pendingMedia = null;
 let recording = false;
+function attachMedia(file, type) {
+  if (!file) return;
+  clearAttachment();
+  pendingMedia = { file, type, previewUrl: URL.createObjectURL(file) };
+  $('#attachmentName').textContent = type === 'photo' ? file.name : 'Voice note siap dikirim';
+  $('#attachmentPreview').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function clearAttachment() {
+  if (pendingMedia?.previewUrl) URL.revokeObjectURL(pendingMedia.previewUrl);
+  pendingMedia = null;
+  $('#attachmentPreview').classList.add('hidden');
+  $('#attachmentName').textContent = '';
+}
+
 $('#profileButton').addEventListener('click', changeName);
+$('#closeNameButton').addEventListener('click', () => $('#nameModal').classList.add('hidden'));
+$('#cancelNameButton').addEventListener('click', () => $('#nameModal').classList.add('hidden'));
+$('#saveNameButton').addEventListener('click', saveName);
+$('#renameInput').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') saveName();
+});
+$('#removeAttachmentButton').addEventListener('click', clearAttachment);
 $('#photoButton').addEventListener('click', () => photoInput.click());
 photoInput.addEventListener('change', () => {
   const file = photoInput.files?.[0];
-  if (file) sendMediaMessage(file, 'photo');
+  if (file) attachMedia(file, 'photo');
   photoInput.value = '';
 });
 $('#voiceButton').addEventListener('click', async () => {
@@ -691,7 +727,9 @@ $('#voiceButton').addEventListener('click', async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     voiceChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
+    const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+    const mimeType = mimeTypes.find((type) => MediaRecorder.isTypeSupported(type));
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     recording = true;
     $('#voiceButton').classList.add('recording');
     mediaRecorder.addEventListener('dataavailable', (event) => voiceChunks.push(event.data));
@@ -699,7 +737,7 @@ $('#voiceButton').addEventListener('click', async () => {
       stream.getTracks().forEach((track) => track.stop());
       recording = false;
       $('#voiceButton').classList.remove('recording');
-      sendMediaMessage(new Blob(voiceChunks, { type: mediaRecorder.mimeType || 'audio/webm' }), 'voice');
+      attachMedia(new Blob(voiceChunks, { type: mediaRecorder.mimeType || mimeType || 'audio/webm' }), 'voice');
     }, { once: true });
     mediaRecorder.start();
     showToast('Merekam voice note... klik mic untuk berhenti');
@@ -716,8 +754,12 @@ messageInput.addEventListener('input', () => {
 messageForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const message = messageInput.value.trim();
-  if (!message) return;
-  if (!sendRealtime({ type: 'chat', message })) showToast('Belum terhubung ke room');
+  if (!message && !pendingMedia) return;
+  if (pendingMedia) {
+    const media = pendingMedia;
+    clearAttachment();
+    sendMediaMessage(media.file, media.type, message);
+  } else if (!sendRealtime({ type: 'chat', message })) showToast('Belum terhubung ke room');
   messageInput.value = '';
   presenceRef?.update({ isTyping: false });
   $('#chatFeed').scrollTop = $('#chatFeed').scrollHeight;

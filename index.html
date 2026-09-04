@@ -60,7 +60,7 @@
           <div class="chat-feed" id="chatFeed"><div class="empty-state chat-empty"><i data-lucide="message-circle"></i><strong>Belum ada chat</strong><span>Jadilah yang pertama menyapa room ini.</span></div></div>
           <p class="typing-indicator hidden" id="typingIndicator" aria-live="polite"></p>
           <div class="reaction-bar"><button class="reaction" data-reaction="❤️" aria-label="Send love reaction">❤️</button><button class="reaction" data-reaction="🔥" aria-label="Send fire reaction">🔥</button><button class="reaction" data-reaction="✨" aria-label="Send sparkle reaction">✨</button><button class="reaction add-reaction" data-reaction="🎉" aria-label="Send celebration reaction">🎉</button></div>
-          <form class="message-form" id="messageForm"><input id="messageInput" type="text" placeholder="Say something..." autocomplete="off" /><input id="photoInput" type="file" accept="image/*" hidden /><button type="button" class="message-tool" id="photoButton" title="Send photo" aria-label="Send photo"><i data-lucide="image"></i></button><button type="button" class="message-tool" id="voiceButton" title="Record voice note" aria-label="Record voice note"><i data-lucide="mic"></i></button><button type="submit" aria-label="Send message"><i data-lucide="arrow-up"></i></button></form>
+          <form class="message-form" id="messageForm"><div class="attachment-preview hidden" id="attachmentPreview"><span class="attachment-icon"><i data-lucide="paperclip"></i></span><span class="attachment-name" id="attachmentName"></span><button type="button" id="removeAttachmentButton" aria-label="Remove attachment"><i data-lucide="x"></i></button></div><input id="messageInput" type="text" placeholder="Say something..." autocomplete="off" /><input id="photoInput" type="file" accept="image/*" hidden /><button type="button" class="message-tool" id="photoButton" title="Attach photo" aria-label="Attach photo"><i data-lucide="image"></i></button><button type="button" class="message-tool" id="voiceButton" title="Record voice note" aria-label="Record voice note"><i data-lucide="mic"></i></button><button type="submit" aria-label="Send message"><i data-lucide="arrow-up"></i></button></form>
           <p class="chat-note"><i data-lucide="lock-keyhole"></i> Messages disappear when the room ends</p>
         </aside>
       </section>
@@ -97,6 +97,17 @@
         <p class="modal-copy">Orang-orang yang sedang menonton di room ini.</p>
         <div class="watching-list"><span class="watching-list-title">WATCHING NOW · <span id="viewerModalCount">0</span></span><div id="watchingList"></div></div>
         <button class="secondary-button full-button" id="leaveRoomButton"><i data-lucide="log-out"></i> Leave room</button>
+      </section>
+    </div>
+    <div class="modal-backdrop hidden" id="nameModal">
+      <section class="modal-card name-card" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
+        <button class="close-modal" id="closeNameButton" aria-label="Close"><i data-lucide="x"></i></button>
+        <p class="eyebrow">YOUR PROFILE</p><h2 id="nameTitle">Change your<br><em>display name.</em></h2>
+        <p class="modal-copy">Nama ini akan terlihat oleh semua orang di room.</p>
+        <label class="field-label" for="renameInput">Nama kamu</label>
+        <input class="modal-input" id="renameInput" type="text" maxlength="24" placeholder="contoh: raka.wav" autocomplete="nickname" />
+        <p class="input-error" id="renameError">Isi nama dulu.</p>
+        <div class="modal-actions modal-actions-end"><button class="secondary-button" id="cancelNameButton">Cancel</button><button class="primary-button" id="saveNameButton">Save <i data-lucide="check"></i></button></div>
       </section>
     </div>
     <div class="modal-backdrop hidden" id="videoModal">
