@@ -1,7 +1,6 @@
 const firebaseDatabase = firebase.database();
 const ref = (parent, path) => typeof parent.ref === 'function' ? parent.ref(path) : parent.child(path);
 const onValue = (target, handler) => target.on('value', handler);
-const onChildAdded = (target, handler) => target.on('child_added', handler);
 const onDisconnect = (target) => target.onDisconnect();
 const push = (target, value) => target.push(value);
 const query = (target, limit) => limit ? target.limitToLast(limit) : target;
@@ -258,10 +257,12 @@ function connectRealtime() {
       else if (!roomState.currentVideoId && selectedVideoId) showEmptyVideoState();
     if (roomState.lastActor !== clientId) setRemotePlayback(roomState.playing, roomState.position);
   });
-  onChildAdded(query(ref(roomRef, 'events'), limitToLast(50)), (snapshot) => {
-    const message = snapshot.val();
-    if (!message) return;
-    if (message.type === 'chat') appendChatMessage(message.name, message.message);
+  onValue(query(ref(roomRef, 'events'), limitToLast(50)), (snapshot) => {
+    clearChatView();
+    snapshot.forEach((messageSnapshot) => {
+      const message = messageSnapshot.val();
+      if (message?.type === 'chat') appendChatMessage(message.name, message.message);
+    });
   });
   $('#viewerCount').textContent = 'connected';
   document.querySelector('.online-count').lastChild.textContent = ' connected';
