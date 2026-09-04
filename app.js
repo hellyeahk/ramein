@@ -33,6 +33,7 @@ let isPlaying = false;
 let ytPlayer;
 let syncingRemotePlayback = false;
 let selectedVideoId = null;
+let controlsHideTimer;
 
 function updatePlayButton() {
   const icon = isPlaying ? 'pause' : 'play';
@@ -76,6 +77,7 @@ function updateNowPlayingFromPlayer() {
 
 function selectVideo(videoId, notifyRoom = true) {
   selectedVideoId = videoId;
+  showVideoControls();
   $('#videoFrame').classList.remove('empty-video');
   $('#noVideoState').classList.add('hidden');
   if (!ytPlayer && window.YT?.Player) initYouTubePlayer();
@@ -337,6 +339,11 @@ playButton.addEventListener('click', togglePlayback);
 controlPlayButton.addEventListener('click', togglePlayback);
 $('#videoFrame').addEventListener('click', (event) => {
   if (event.target.closest('#playButton, #controlPlayButton, #progressBar, .video-topline')) return;
+  if (event.target.closest('.video-controls')) return;
+  if ($('#videoFrame').classList.contains('controls-hidden')) {
+    showVideoControls();
+    return;
+  }
   togglePlayback();
 });
 
@@ -390,6 +397,12 @@ function addQueueItem(videoId, notifyServer = true) {
   item.innerHTML = `<span class="drag"><i data-lucide="grip-vertical"></i></span><div class="thumb youtube-thumb" style="background-image:url('https://img.youtube.com/vi/${videoId}/mqdefault.jpg')"></div><div class="queue-copy"><strong>YouTube video · ${videoId}</strong><span>Added just now · ready to watch</span></div><button class="more-button" aria-label="More options"><i data-lucide="more-horizontal"></i></button>`;
   queueList.append(item);
   $('#queueCount').textContent = queueList.querySelectorAll('.queue-item').length;
+  fetch(`/api/video?id=${encodeURIComponent(videoId)}`)
+    .then((response) => response.ok ? response.json() : null)
+    .then((video) => {
+      if (video) item.querySelector('.queue-copy strong').textContent = video.title;
+    })
+    .catch(() => {});
   if (notifyServer) sendRealtime({ type: 'queue_add', videoId });
   item.addEventListener('click', (event) => {
     if (event.target.closest('.more-button')) return;
@@ -464,6 +477,23 @@ const progressBar = $('#progressBar');
 const currentTime = $('#currentTime');
 const durationTime = $('#durationTime');
 let isSeeking = false;
+function showVideoControls() {
+  const frame = $('#videoFrame');
+  frame.classList.remove('controls-hidden');
+  clearTimeout(controlsHideTimer);
+  if (selectedVideoId) controlsHideTimer = setTimeout(() => frame.classList.add('controls-hidden'), 4000);
+}
+
+function skipVideo(seconds) {
+  if (!ytPlayer?.getCurrentTime || !ytPlayer?.getDuration) return;
+  const nextPosition = Math.max(0, Math.min(ytPlayer.getDuration(), ytPlayer.getCurrentTime() + seconds));
+  ytPlayer.seekTo(nextPosition, true);
+  sendRealtime({ type: 'playback', playing: isPlaying, position: Math.round(nextPosition) });
+  showVideoControls();
+}
+
+$('#skipBackButton').addEventListener('click', () => skipVideo(-5));
+$('#skipForwardButton').addEventListener('click', () => skipVideo(5));
 progressBar.addEventListener('pointerdown', () => { isSeeking = true; });
 progressBar.addEventListener('pointerup', () => {
   isSeeking = false;
@@ -472,6 +502,7 @@ progressBar.addEventListener('pointerup', () => {
     ytPlayer.seekTo(seconds, true);
     sendPlaybackState();
   }
+  showVideoControls();
 });
 progressBar.addEventListener('input', () => {
   const seconds = Math.round((Number(progressBar.value) / 100) * (ytPlayer?.getDuration?.() || 3764));
