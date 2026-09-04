@@ -7,7 +7,8 @@
   .topbar{position:relative;z-index:90}
   .workspace{min-height:0;overflow:hidden}
   .workspace{gap:8px}
-  .chat-panel{height:520px;min-height:520px;position:static;padding-bottom:76px}
+  .chat-panel{height:520px;min-height:520px;position:static;padding-bottom:92px}
+  .chat-feed{padding-bottom:34px}
   .message-form{
     position:fixed;
     left:10px;
@@ -109,7 +110,7 @@ input[type="text"],input[type="url"]{cursor:text}
     background:var(--panel);
     border-left:1px solid #222326;
     box-shadow:-14px 0 40px #000a;
-    z-index:80;
+    z-index:100;
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
     transform:translateX(100%);
@@ -128,7 +129,7 @@ input[type="text"],input[type="url"]{cursor:text}
     opacity:0;
     pointer-events:none;
     transition:opacity .25s ease;
-    z-index:75;
+    z-index:95;
   }
   .queue-backdrop.queue-open{opacity:1;pointer-events:auto}
   body.queue-drawer-open{overflow:hidden}
