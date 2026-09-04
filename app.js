@@ -1,5 +1,5 @@
 const firebaseDatabase = firebase.database();
-const ref = (parent, path) => parent.ref(path);
+const ref = (parent, path) => typeof parent.ref === 'function' ? parent.ref(path) : parent.child(path);
 const onValue = (target, handler) => target.on('value', handler);
 const onChildAdded = (target, handler) => target.on('child_added', handler);
 const onDisconnect = (target) => target.onDisconnect();
@@ -198,6 +198,7 @@ function connectRealtime() {
 }
 
 function leaveRoom() {
+  if (!window.confirm('Keluar dari room ini?')) return;
   presenceRef?.remove();
   roomRef?.off();
   presenceRef?.off();
