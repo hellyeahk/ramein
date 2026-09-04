@@ -1,16 +1,14 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
-import { getDatabase, limitToLast, onChildAdded, onDisconnect, onValue, push, query, ref, runTransaction, set, update } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyDuEpkc2Q7C76AydOGS3eWKK3iBkVWeG_A',
-  authDomain: 'ramein-37647.firebaseapp.com',
-  databaseURL: 'https://ramein-37647-default-rtdb.asia-southeast1.firebasedatabase.app',
-  projectId: 'ramein-37647',
-  storageBucket: 'ramein-37647.firebasestorage.app',
-  messagingSenderId: '172457859273',
-  appId: '1:172457859273:web:f20d1d8a6778f0d3db1518'
-};
-const firebaseDatabase = getDatabase(initializeApp(firebaseConfig), firebaseConfig.databaseURL);
+const firebaseDatabase = firebase.database();
+const ref = (parent, path) => parent.ref(path);
+const onValue = (target, handler) => target.on('value', handler);
+const onChildAdded = (target, handler) => target.on('child_added', handler);
+const onDisconnect = (target) => target.onDisconnect();
+const push = (target, value) => target.push(value);
+const query = (target, limit) => limit ? target.limitToLast(limit) : target;
+const limitToLast = (limit) => limit;
+const runTransaction = (target, handler) => target.transaction(handler);
+const set = (target, value) => target.set(value);
+const update = (target, value) => target.update(value);
 
 const $ = (selector) => document.querySelector(selector);
 const toast = $('#toast');
