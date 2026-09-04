@@ -359,7 +359,7 @@ function connectRealtime() {
       if (message?.type !== 'chat' && message?.type !== 'reaction') return;
       currentChatEventIds.add(messageSnapshot.key);
       if (message.type === 'chat') appendChatMessage(message.name, message.message, message.media);
-      if (message.type === 'reaction' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key)) showFloatingReaction(message.message);
+      if (message.type === 'reaction' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.clientId !== clientId) showFloatingReaction(message.message);
       if (chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.name !== userName) playNotificationSound();
     });
     knownChatEventIds = currentChatEventIds;
@@ -416,7 +416,7 @@ function leaveRoom(force = false, silent = false) {
 function sendRealtime(message) {
   if (!roomRef) return false;
   if (message.type === 'chat' || message.type === 'reaction') {
-    push(ref(roomRef, 'events'), { ...message, name: userName || 'Guest', createdAt: Date.now() });
+    push(ref(roomRef, 'events'), { ...message, name: userName || 'Guest', clientId, createdAt: Date.now() });
     return true;
   }
   if (message.type === 'queue_add') {
@@ -836,6 +836,7 @@ messageForm.addEventListener('submit', (event) => {
 document.querySelectorAll('.reaction').forEach((button) => {
   button.addEventListener('click', () => {
     if (!sendRealtime({ type: 'reaction', message: button.dataset.reaction })) return showToast('Belum terhubung ke room');
+    showFloatingReaction(button.dataset.reaction);
     showToast(`${button.dataset.reaction} dikirim ke room`);
   });
 });
