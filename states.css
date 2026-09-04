@@ -15,7 +15,8 @@
 button,.queue-item,.reaction,input[type="range"]{cursor:pointer}
 input[type="text"],input[type="url"]{cursor:text}
 .video-frame{cursor:default}
-.video-meta{display:none}
+.video-meta{display:flex;justify-content:flex-end}
+.video-meta>div{display:none}
 .queue-copy .queue-now-playing{color:var(--accent);font:700 9px 'DM Mono',monospace;letter-spacing:.8px}
 .queue-actions{display:flex;align-items:center;gap:2px;margin-left:auto}
 .queue-action{display:grid;place-items:center;width:25px;height:25px;background:transparent;color:var(--dim);cursor:pointer}
