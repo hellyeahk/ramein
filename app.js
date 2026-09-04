@@ -28,6 +28,7 @@ let roomRef;
 let presenceRef;
 let roomState = {};
 let clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let typingTimer;
 let isPlaying = false;
 let ytPlayer;
 let syncingRemotePlayback = false;
@@ -165,11 +166,24 @@ function connectRealtime() {
   }
   roomRef = ref(database, `rooms/${roomCode}`);
   presenceRef = ref(roomRef, `presence/${clientId}`);
-  set(presenceRef, { name: userName || 'Guest' });
+  set(presenceRef, { name: userName || 'Guest', isTyping: false });
   onDisconnect(presenceRef).remove();
   onValue(ref(roomRef, 'presence'), (snapshot) => {
     const presence = snapshot.val() || {};
-    const viewers = Object.values(presence).map((person) => person.name).filter(Boolean);
+    const presenceEntries = Object.entries(presence);
+    const viewers = presenceEntries.map(([, person]) => person.name).filter(Boolean);
+    const typingNames = presenceEntries
+      .filter(([id, person]) => id !== clientId && person.isTyping)
+      .map(([, person]) => person.name)
+      .filter(Boolean);
+    const typingIndicator = $('#typingIndicator');
+    if (typingNames.length) {
+      typingIndicator.textContent = `${typingNames.join(', ')} ${typingNames.length === 1 ? 'is' : 'are'} typing...`;
+      typingIndicator.classList.remove('hidden');
+    } else {
+      typingIndicator.textContent = '';
+      typingIndicator.classList.add('hidden');
+    }
     $('#viewerCount').textContent = `${viewers.length || 1} watching`;
     document.querySelector('.online-count').lastChild.textContent = ` ${viewers.length || 1} online`;
     renderViewers(viewers);
@@ -199,6 +213,8 @@ function connectRealtime() {
 
 function leaveRoom() {
   if (!window.confirm('Keluar dari room ini?')) return;
+  clearTimeout(typingTimer);
+  presenceRef?.update({ isTyping: false });
   presenceRef?.remove();
   roomRef?.off();
   presenceRef?.off();
@@ -409,12 +425,19 @@ $('#clearQueue').addEventListener('click', () => {
 
 const messageForm = $('#messageForm');
 const messageInput = $('#messageInput');
+messageInput.addEventListener('input', () => {
+  if (!presenceRef) return;
+  presenceRef.update({ isTyping: messageInput.value.trim().length > 0 });
+  clearTimeout(typingTimer);
+  if (messageInput.value.trim()) typingTimer = setTimeout(() => presenceRef?.update({ isTyping: false }), 1000);
+});
 messageForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const message = messageInput.value.trim();
   if (!message) return;
   if (!sendRealtime({ type: 'chat', message })) showToast('Belum terhubung ke room');
   messageInput.value = '';
+  presenceRef?.update({ isTyping: false });
   $('#chatFeed').scrollTop = $('#chatFeed').scrollHeight;
 });
 
