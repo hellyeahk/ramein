@@ -25,7 +25,7 @@
         <button class="room-presence room-button" id="roomButton" aria-label="Open room details"><span class="live-dot"></span><span>ROOM <b id="roomCode">7F3A</b></span><span class="presence-divider"></span><span id="viewerCount">connecting...</span><i data-lucide="chevron-down"></i></button>
         <div class="top-actions">
           <button class="icon-button" id="inviteButton" title="Invite friends" aria-label="Invite friends"><i data-lucide="user-plus"></i></button>
-          <button class="avatar avatar-you" title="Your profile" aria-label="Your profile">Y</button>
+          <button class="avatar avatar-you" id="profileButton" title="Change your name" aria-label="Change your name">Y</button>
         </div>
       </nav>
 
@@ -57,7 +57,7 @@
           <div class="chat-feed" id="chatFeed"><div class="empty-state chat-empty"><i data-lucide="message-circle"></i><strong>Belum ada chat</strong><span>Jadilah yang pertama menyapa room ini.</span></div></div>
           <p class="typing-indicator hidden" id="typingIndicator" aria-live="polite"></p>
           <div class="reaction-bar"><button class="reaction" data-reaction="❤️" aria-label="Send love reaction">❤️</button><button class="reaction" data-reaction="🔥" aria-label="Send fire reaction">🔥</button><button class="reaction" data-reaction="✨" aria-label="Send sparkle reaction">✨</button><button class="reaction add-reaction" data-reaction="🎉" aria-label="Send celebration reaction">🎉</button></div>
-          <form class="message-form" id="messageForm"><input id="messageInput" type="text" placeholder="Say something..." autocomplete="off" /><button type="submit" aria-label="Send message"><i data-lucide="arrow-up"></i></button></form>
+          <form class="message-form" id="messageForm"><input id="messageInput" type="text" placeholder="Say something..." autocomplete="off" /><input id="photoInput" type="file" accept="image/*" hidden /><button type="button" class="message-tool" id="photoButton" title="Send photo" aria-label="Send photo"><i data-lucide="image"></i></button><button type="button" class="message-tool" id="voiceButton" title="Record voice note" aria-label="Record voice note"><i data-lucide="mic"></i></button><button type="submit" aria-label="Send message"><i data-lucide="arrow-up"></i></button></form>
           <p class="chat-note"><i data-lucide="lock-keyhole"></i> Messages disappear when the room ends</p>
         </aside>
       </section>
@@ -109,6 +109,7 @@
     <div class="toast" id="toast" role="status"></div>
     <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-storage-compat.js"></script>
     <script>
       const firebaseConfig = {
         apiKey: 'AIzaSyDuEpkc2Q7C76AydOGS3eWKK3iBkVWeG_A',

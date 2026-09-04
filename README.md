@@ -13,6 +13,6 @@ Metadata video diambil melalui YouTube oEmbed. Endpoint pencarian YouTube masih 
 
 Import repository ini ke Vercel tanpa environment variable. Vercel otomatis menyajikan file frontend dan endpoint `/api/video` serta `/api/search` sebagai serverless functions.
 
-Fitur paste link dan pemutaran video tidak memerlukan YouTube API key. Chat, queue bersama, playback bersama, reaction, dan presence menggunakan Firebase Realtime Database sehingga tetap bisa berjalan dalam mode Vercel-only.
+Fitur paste link dan pemutaran video tidak memerlukan YouTube API key. Chat, queue bersama, playback bersama, reaction, dan presence menggunakan Firebase Realtime Database sehingga tetap bisa berjalan dalam mode Vercel-only. Foto dan voice note menggunakan Firebase Storage.
 
-Aktifkan Realtime Database di Firebase Console dan isi konfigurasi Firebase di `index.html`. Untuk testing awal, database boleh memakai Test mode; sebelum dipublikasikan, ubah rules agar akses tidak terbuka tanpa batas.
+Aktifkan Realtime Database dan Storage di Firebase Console, lalu isi konfigurasi Firebase di `index.html`. Untuk testing awal, database dan Storage boleh memakai Test mode; sebelum dipublikasikan, ubah rules agar akses tidak terbuka tanpa batas.

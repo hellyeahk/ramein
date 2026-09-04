@@ -1,4 +1,5 @@
 const firebaseDatabase = firebase.database();
+const firebaseStorage = firebase.storage();
 const ref = (parent, path) => typeof parent.ref === 'function' ? parent.ref(path) : parent.child(path);
 const onValue = (target, handler) => target.on('value', handler);
 const onDisconnect = (target) => target.onDisconnect();
@@ -26,6 +27,9 @@ let userName = sessionStorage.getItem('ramein-name');
 let roomRef;
 let presenceRef;
 let roomState = {};
+let isHost = false;
+let mediaRecorder;
+let voiceChunks = [];
 let clientId = sessionStorage.getItem('ramein-client-id');
 if (!clientId) {
   clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -34,6 +38,7 @@ if (!clientId) {
 let typingTimer;
 let knownPresenceIds = new Set();
 let knownPresenceNames = new Map();
+let currentPresencePeople = [];
 let presenceInitialized = false;
 let isPageUnloading = false;
 let isPlaying = false;
@@ -163,15 +168,17 @@ function initYouTubePlayer() {
 window.onYouTubeIframeAPIReady = initYouTubePlayer;
 if (window.YT?.Player) setTimeout(initYouTubePlayer, 0);
 
-function appendChatMessage(name, message) {
+function appendChatMessage(name, message, media = {}) {
   $('.chat-empty')?.remove();
   const bubble = document.createElement('div');
   bubble.className = 'chat-message';
   bubble.dataset.author = name;
-  bubble.innerHTML = `<span class="avatar avatar-you"></span><div><div class="name-line"><strong></strong><time>now</time></div><p></p></div>`;
+  bubble.innerHTML = `<span class="avatar avatar-you"></span><div><div class="name-line"><strong></strong><time>now</time></div><p></p><div class="chat-media"></div></div>`;
   bubble.querySelector('.avatar').textContent = name.slice(0, 1).toUpperCase();
   bubble.querySelector('strong').textContent = name;
-  bubble.querySelector('p').textContent = message;
+  bubble.querySelector('p').textContent = media.url ? '' : message;
+  if (media.type === 'photo' && media.url) bubble.querySelector('.chat-media').innerHTML = `<a href="${media.url}" target="_blank" rel="noreferrer"><img src="${media.url}" alt="Photo from ${name}"></a>`;
+  if (media.type === 'voice' && media.url) bubble.querySelector('.chat-media').innerHTML = `<audio controls src="${media.url}"></audio>`;
   $('#chatFeed').append(bubble);
   $('#chatFeed').scrollTop = $('#chatFeed').scrollHeight;
 }
@@ -195,16 +202,20 @@ function showEmptyVideoState() {
 function renderViewers(names = []) {
   const list = $('#watchingList');
   list.innerHTML = '';
-  const visibleNames = names.length ? names : [userName || 'You'];
+  const people = names.length ? names : [{ id: clientId, name: userName || 'You' }];
+  const visibleNames = people.map((person) => typeof person === 'string' ? { id: '', name: person } : person);
   $('#viewerModalCount').textContent = visibleNames.length;
-  visibleNames.forEach((name) => {
+  visibleNames.forEach((personData) => {
     const person = document.createElement('div');
     person.className = 'watching-person';
-    person.innerHTML = '<span class="avatar avatar-you"></span><strong></strong><span class="person-status"></span>';
-    person.querySelector('.avatar').textContent = name.slice(0, 1).toUpperCase();
-    person.querySelector('strong').textContent = name;
+    const kickButton = isHost && personData.id && personData.id !== clientId ? '<button class="kick-button" data-kick-id="' + personData.id + '" title="Kick viewer" aria-label="Kick viewer"><i data-lucide="user-x"></i></button>' : '';
+    person.innerHTML = `<span class="avatar avatar-you"></span><strong></strong><span class="person-status"></span>${kickButton}`;
+    person.querySelector('.avatar').textContent = personData.name.slice(0, 1).toUpperCase();
+    person.querySelector('strong').textContent = personData.name;
+    person.querySelector('.kick-button')?.addEventListener('click', () => kickViewer(personData.id, personData.name));
     list.append(person);
   });
+  lucide.createIcons();
 }
 
 function clearQueueView() {
@@ -227,6 +238,7 @@ function connectRealtime() {
   presenceInitialized = false;
   presenceRef = ref(roomRef, `presence/${clientId}`);
   onDisconnect(presenceRef).remove();
+  if (isHost) update(ref(roomRef, 'state'), { hostId: clientId });
   set(presenceRef, { name: userName || 'Guest', isTyping: false });
   onValue(ref(roomRef, 'presence'), (snapshot) => {
     const presence = snapshot.val() || {};
@@ -243,7 +255,8 @@ function connectRealtime() {
     knownPresenceIds = currentPresenceIds;
     knownPresenceNames = new Map(presenceEntries.map(([id, person]) => [id, person.name || 'Seseorang']));
     presenceInitialized = true;
-    const viewers = presenceEntries.map(([, person]) => person.name).filter(Boolean);
+    const viewers = presenceEntries.map(([id, person]) => ({ id, name: person.name })).filter((person) => person.name);
+    currentPresencePeople = viewers;
     const typingNames = presenceEntries
       .filter(([id, person]) => id !== clientId && person.isTyping)
       .map(([, person]) => person.name)
@@ -262,6 +275,9 @@ function connectRealtime() {
   });
   onValue(ref(roomRef, 'state'), (snapshot) => {
     roomState = snapshot.val() || {};
+    if (roomState.hostId) isHost = roomState.hostId === clientId;
+    else if (isHost) update(ref(roomRef, 'state'), { hostId: clientId });
+    renderViewers(currentPresencePeople);
     clearQueueView();
     (roomState.queue || []).forEach((videoId) => addQueueItem(videoId, false));
     if (roomState.currentVideoId && roomState.currentVideoId !== selectedVideoId) selectVideo(roomState.currentVideoId, false);
@@ -272,12 +288,19 @@ function connectRealtime() {
     clearChatView();
     snapshot.forEach((messageSnapshot) => {
       const message = messageSnapshot.val();
-      if (message?.type === 'chat') appendChatMessage(message.name, message.message);
+      if (message?.type === 'chat') appendChatMessage(message.name, message.message, message.media);
     });
   });
   $('#viewerCount').textContent = 'connected';
   document.querySelector('.online-count').lastChild.textContent = ' connected';
   showToast('Terhubung ke Firebase realtime');
+}
+
+function kickViewer(viewerId, viewerName) {
+  if (!isHost || viewerId === clientId) return;
+  if (!window.confirm(`Keluarkan ${viewerName} dari room?`)) return;
+  ref(roomRef, `presence/${viewerId}`).remove();
+  showToast(`${viewerName} dikeluarkan dari room`);
 }
 
 function leaveRoom() {
@@ -298,6 +321,7 @@ function leaveRoom() {
   presenceRef = null;
   knownPresenceIds = new Set();
   knownPresenceNames = new Map();
+  currentPresencePeople = [];
   presenceInitialized = false;
   roomCode = '';
   $('#viewerModal').classList.add('hidden');
@@ -350,8 +374,32 @@ function sendRealtime(message) {
   return false;
 }
 
-function enterRoom(code) {
+async function sendMediaMessage(file, type) {
+  if (!roomRef || !file) return;
+  const fileRef = firebaseStorage.ref(`rooms/${roomCode}/media/${clientId}-${Date.now()}-${file.name}`);
+  try {
+    showToast(type === 'photo' ? 'Mengunggah foto...' : 'Mengunggah voice note...');
+    await fileRef.put(file);
+    const url = await fileRef.getDownloadURL();
+    sendRealtime({ type: 'chat', message: type === 'photo' ? '📷 Foto' : '🎙️ Voice note', media: { type, url } });
+  } catch {
+    showToast('Media gagal dikirim');
+  }
+}
+
+function changeName() {
+  const nextName = window.prompt('Nama baru', userName || 'Guest')?.trim().slice(0, 24);
+  if (!nextName) return;
+  userName = nextName;
+  sessionStorage.setItem('ramein-name', userName);
+  $('#profileButton').textContent = userName.slice(0, 1).toUpperCase();
+  presenceRef?.update({ name: userName });
+  showToast('Nama berhasil diubah');
+}
+
+function enterRoom(code, host = false) {
   isPageUnloading = false;
+  isHost = host;
   roomRef?.off();
   presenceRef?.off();
   clearChatView();
@@ -378,7 +426,10 @@ function validateName() {
   return true;
 }
 
-if (userName) nameInput.value = userName;
+if (userName) {
+  nameInput.value = userName;
+  $('#profileButton').textContent = userName.slice(0, 1).toUpperCase();
+}
 if (userName && roomFromUrl) enterRoom(roomCode);
 else nameInput.focus();
 
@@ -392,7 +443,7 @@ if (roomFromUrl) {
 $('#createRoomButton').addEventListener('click', () => {
   if (!validateName()) return;
   const destinationRoom = roomFromUrl || Math.random().toString(36).slice(2, 6).toUpperCase();
-  enterRoom(destinationRoom);
+  enterRoom(destinationRoom, !roomFromUrl);
   showToast(`Room ${roomCode} berhasil dibuat`);
 });
 
@@ -584,6 +635,37 @@ $('#clearQueue').addEventListener('click', () => {
 
 const messageForm = $('#messageForm');
 const messageInput = $('#messageInput');
+const photoInput = $('#photoInput');
+let recording = false;
+$('#profileButton').addEventListener('click', changeName);
+$('#photoButton').addEventListener('click', () => photoInput.click());
+photoInput.addEventListener('change', () => {
+  const file = photoInput.files?.[0];
+  if (file) sendMediaMessage(file, 'photo');
+  photoInput.value = '';
+});
+$('#voiceButton').addEventListener('click', async () => {
+  if (recording) return mediaRecorder.stop();
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return showToast('Voice note tidak didukung browser ini');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voiceChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    recording = true;
+    $('#voiceButton').classList.add('recording');
+    mediaRecorder.addEventListener('dataavailable', (event) => voiceChunks.push(event.data));
+    mediaRecorder.addEventListener('stop', () => {
+      stream.getTracks().forEach((track) => track.stop());
+      recording = false;
+      $('#voiceButton').classList.remove('recording');
+      sendMediaMessage(new Blob(voiceChunks, { type: mediaRecorder.mimeType || 'audio/webm' }), 'voice');
+    }, { once: true });
+    mediaRecorder.start();
+    showToast('Merekam voice note... klik mic untuk berhenti');
+  } catch {
+    showToast('Izin mikrofon diperlukan');
+  }
+});
 messageInput.addEventListener('input', () => {
   if (!presenceRef) return;
   presenceRef.update({ isTyping: messageInput.value.trim().length > 0 });
