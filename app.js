@@ -1,8 +1,16 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { getDatabase, limitToLast, onChildAdded, onDisconnect, onValue, push, query, ref, runTransaction, set, update } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js';
 
-const firebaseApp = initializeApp(window.rameinFirebaseConfig);
-const firebaseDatabase = getDatabase(firebaseApp);
+const firebaseConfig = {
+  apiKey: 'AIzaSyDuEpkc2Q7C76AydOGS3eWKK3iBkVWeG_A',
+  authDomain: 'ramein-37647.firebaseapp.com',
+  databaseURL: 'https://ramein-37647-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId: 'ramein-37647',
+  storageBucket: 'ramein-37647.firebasestorage.app',
+  messagingSenderId: '172457859273',
+  appId: '1:172457859273:web:f20d1d8a6778f0d3db1518'
+};
+const firebaseDatabase = getDatabase(initializeApp(firebaseConfig), firebaseConfig.databaseURL);
 
 const $ = (selector) => document.querySelector(selector);
 const toast = $('#toast');
@@ -153,8 +161,8 @@ function clearQueueView() {
 function connectRealtime() {
   const database = firebaseDatabase;
   if (!database) {
-    $('#viewerCount').textContent = 'local mode';
-    document.querySelector('.online-count').lastChild.textContent = ' local mode';
+    $('#viewerCount').textContent = 'connecting...';
+    document.querySelector('.online-count').lastChild.textContent = ' connecting...';
     return;
   }
   roomRef = ref(database, `rooms/${roomCode}`);
