@@ -61,6 +61,7 @@ input[type="text"],input[type="url"]{cursor:text}
 .attachment-preview{display:flex;align-items:center;gap:6px;min-width:0;flex:0 0 100%;order:-1;padding:6px 8px;background:#303329;color:var(--muted);border-radius:8px;font-size:10px}
 .attachment-preview.hidden{display:none}
 .attachment-visual{display:block;max-width:min(180px,100%);height:auto;border-radius:6px;object-fit:contain}
+.attachment-preview img.attachment-visual{width:112px;height:76px;object-fit:cover}
 .attachment-preview audio.attachment-visual{width:min(240px,100%)}
 .attachment-icon{display:grid;place-items:center;flex:none;color:var(--accent)}
 .attachment-icon svg{width:13px}

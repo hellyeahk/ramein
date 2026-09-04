@@ -444,7 +444,7 @@ async function sendMediaMessage(file, type, message = '') {
     });
     if (!uploadResponse.ok) throw new Error('Upload failed');
     const { url } = await uploadResponse.json();
-    await push(ref(roomRef, 'events'), { type: 'chat', message: message || (type === 'photo' ? '📷 Foto' : '🎙️ Voice note'), media: { type, url }, name: userName || 'Guest', createdAt: Date.now() });
+    await push(ref(roomRef, 'events'), { type: 'chat', message, media: { type, url }, name: userName || 'Guest', createdAt: Date.now() });
     showToast(type === 'photo' ? 'Foto terkirim' : 'Voice note terkirim');
   } catch {
     showToast('Media gagal dikirim');
