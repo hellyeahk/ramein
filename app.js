@@ -20,7 +20,7 @@ const welcomeModal = $('#welcomeModal');
 const joinForm = $('#joinForm');
 const nameInput = $('#nameInput');
 const joinCodeInput = $('#joinCodeInput');
-const initialRoomFromUrl = window.location.hash.match(/room-([a-z0-9]{4})/i)?.[1]?.toUpperCase();
+const initialRoomFromUrl = window.location.hash.match(/room-([a-zA-Z0-9]{4})/)?.[1];
 let roomCode = initialRoomFromUrl || '7F3A';
 let userName = sessionStorage.getItem('ramein-name');
 let roomRef;
@@ -437,7 +437,7 @@ function enterRoom(code, host = false) {
   roomRef?.off();
   presenceRef?.off();
   clearChatView();
-  roomCode = code.toUpperCase();
+  roomCode = code;
   roomCodeElement.textContent = roomCode;
   $('#largeRoomCode').textContent = roomCode;
   $('#viewerRoomCode').textContent = roomCode;

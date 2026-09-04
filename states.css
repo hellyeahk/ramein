@@ -6,18 +6,18 @@
   body{height:100%;overflow:hidden}
   .topbar{position:relative;z-index:90}
   .workspace{min-height:0;overflow:hidden}
+  .workspace{gap:8px}
   .chat-panel{height:520px;min-height:520px;position:static;padding-bottom:76px}
   .message-form{
     position:fixed;
-    left:0;
-    right:0;
+    left:10px;
+    right:10px;
     bottom:0;
     z-index:55;
     margin:0;
-    border-radius:0;
-    border-left:0;
-    border-right:0;
-    border-bottom:0;
+    border-radius:999px;
+    border:1px solid #3b3d3e;
+    box-shadow:0 8px 24px #0008;
     min-height:54px;
     padding:9px 12px calc(9px + env(safe-area-inset-bottom));
   }
@@ -70,7 +70,8 @@ input[type="text"],input[type="url"]{cursor:text}
   .top-actions .queue-menu-button{display:grid}
   .top-actions .mobile-queue-button{display:grid;background:var(--accent);border-color:var(--accent);color:#111}
   .video-meta .queue-button{display:none}
-  .up-next{display:none}
+  .up-next{display:block}
+  .up-next>.section-heading{display:none}
   .queue-list{
     position:fixed;
     top:0;
