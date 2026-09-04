@@ -1,3 +1,5 @@
+import { limitToLast, onChildAdded, onDisconnect, onValue, push, query, ref, remove, runTransaction, set, update } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js';
+
 const $ = (selector) => document.querySelector(selector);
 const toast = $('#toast');
 let toastTimer;
@@ -12,7 +14,10 @@ const joinCodeInput = $('#joinCodeInput');
 const roomFromUrl = window.location.hash.match(/room-([a-z0-9]{4})/i)?.[1]?.toUpperCase();
 let roomCode = roomFromUrl || '7F3A';
 let userName = sessionStorage.getItem('ramein-name');
-let socket;
+let roomRef;
+let presenceRef;
+let roomState = {};
+let clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let isPlaying = false;
 let ytPlayer;
 let syncingRemotePlayback = false;
@@ -26,8 +31,8 @@ function updatePlayButton() {
 }
 
 function sendPlaybackState() {
-  if (socket?.readyState !== WebSocket.OPEN || !ytPlayer?.getCurrentTime) return;
-  socket.send(JSON.stringify({ type: 'playback', playing: isPlaying, position: Math.round(ytPlayer.getCurrentTime()) }));
+  if (!ytPlayer?.getCurrentTime) return;
+  sendRealtime({ type: 'playback', playing: isPlaying, position: Math.round(ytPlayer.getCurrentTime()) });
 }
 
 function sendYouTubeCommand(command, args = []) {
@@ -66,7 +71,7 @@ function selectVideo(videoId, notifyRoom = true) {
   if (ytPlayer?.loadVideoById) ytPlayer.loadVideoById(videoId);
   updateNowPlaying(videoId);
   setTimeout(updateNowPlayingFromPlayer, 1200);
-  if (notifyRoom && socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'video_select', videoId }));
+  if (notifyRoom) sendRealtime({ type: 'video_select', videoId });
 }
 
 function initYouTubePlayer() {
@@ -142,49 +147,72 @@ function clearQueueView() {
 }
 
 function connectRealtime() {
-  if (socket) socket.close();
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const host = window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname;
-  const realtimeUrl = window.RAMEIN_WS_URL || (window.location.hostname === 'localhost' ? `${protocol}://${host}:8765` : '');
-  if (!realtimeUrl) {
+  const database = window.rameinDatabase;
+  if (!database) {
     $('#viewerCount').textContent = 'local mode';
     document.querySelector('.online-count').lastChild.textContent = ' local mode';
     return;
   }
-  socket = new WebSocket(realtimeUrl);
-  socket.addEventListener('open', () => {
-    socket.send(JSON.stringify({ type: 'hello', room: roomCode, name: userName }));
-    showToast('Terhubung ke room realtime');
+  roomRef = ref(database, `rooms/${roomCode}`);
+  presenceRef = ref(roomRef, `presence/${clientId}`);
+  set(presenceRef, { name: userName || 'Guest' });
+  onDisconnect(presenceRef).remove();
+  onValue(ref(roomRef, 'presence'), (snapshot) => {
+    const presence = snapshot.val() || {};
+    const viewers = Object.values(presence).map((person) => person.name).filter(Boolean);
+    $('#viewerCount').textContent = `${viewers.length || 1} watching`;
+    document.querySelector('.online-count').lastChild.textContent = ` ${viewers.length || 1} online`;
+    renderViewers(viewers);
   });
-  socket.addEventListener('message', (event) => {
-    const message = JSON.parse(event.data);
-    if (message.type === 'presence' || message.type === 'state') {
-      $('#viewerCount').textContent = `${message.viewerCount || 1} watching`;
-      document.querySelector('.online-count').lastChild.textContent = ` ${message.viewerCount || 1} online`;
-      renderViewers(message.viewers || []);
-    }
-    if (message.type === 'state') {
-      clearQueueView();
-      message.queue.forEach((videoId) => addQueueItem(videoId, false));
-      if (message.currentVideoId) selectVideo(message.currentVideoId, false);
-      else showEmptyVideoState();
-      setRemotePlayback(message.playing, message.position);
-    }
-    if (message.type === 'queue_add') addQueueItem(message.videoId, false);
-    if (message.type === 'queue_clear') clearQueueView();
-    if (message.type === 'video_select') selectVideo(message.videoId, false);
+  onValue(ref(roomRef, 'state'), (snapshot) => {
+    roomState = snapshot.val() || {};
+    clearQueueView();
+    (roomState.queue || []).forEach((videoId) => addQueueItem(videoId, false));
+    if (roomState.currentVideoId && roomState.currentVideoId !== selectedVideoId) selectVideo(roomState.currentVideoId, false);
+    else showEmptyVideoState();
+    if (roomState.lastActor !== clientId) setRemotePlayback(roomState.playing, roomState.position);
+  });
+  onChildAdded(query(ref(roomRef, 'events'), limitToLast(50)), (snapshot) => {
+    const message = snapshot.val();
+    if (!message) return;
     if (message.type === 'chat') appendChatMessage(message.name, message.message);
     if (message.type === 'reaction') {
       const button = document.querySelector(`[data-reaction="${message.emoji}"]`);
       const count = button?.querySelector('span');
       if (count) count.textContent = Number(count.textContent) + 1;
     }
-    if (message.type === 'playback' && message.name !== userName) {
-      setRemotePlayback(message.playing, message.position);
-      showToast(`${message.name} ${isPlaying ? 'memulai' : 'menjeda'} playback`);
-    }
   });
-  socket.addEventListener('close', () => showToast('Koneksi room terputus'));
+  $('#viewerCount').textContent = 'connected';
+  document.querySelector('.online-count').lastChild.textContent = ' connected';
+  showToast('Terhubung ke Firebase realtime');
+}
+
+function sendRealtime(message) {
+  if (!roomRef) return false;
+  if (message.type === 'chat' || message.type === 'reaction') {
+    push(ref(roomRef, 'events'), { ...message, name: userName || 'Guest', createdAt: Date.now() });
+    return true;
+  }
+  if (message.type === 'queue_add') {
+    runTransaction(ref(roomRef, 'state/queue'), (queue = []) => {
+      const nextQueue = Array.isArray(queue) ? queue : [];
+      return nextQueue.includes(message.videoId) ? nextQueue : [...nextQueue, message.videoId];
+    });
+    return true;
+  }
+  if (message.type === 'queue_clear') {
+    set(ref(roomRef, 'state/queue'), []);
+    return true;
+  }
+  if (message.type === 'video_select') {
+    update(ref(roomRef, 'state'), { currentVideoId: message.videoId, lastActor: clientId });
+    return true;
+  }
+  if (message.type === 'playback') {
+    update(ref(roomRef, 'state'), { playing: message.playing, position: message.position, lastActor: clientId });
+    return true;
+  }
+  return false;
 }
 
 function enterRoom(code) {
@@ -320,7 +348,7 @@ function addQueueItem(videoId, notifyServer = true) {
   item.innerHTML = `<span class="drag"><i data-lucide="grip-vertical"></i></span><div class="thumb youtube-thumb" style="background-image:url('https://img.youtube.com/vi/${videoId}/mqdefault.jpg')"></div><div class="queue-copy"><strong>YouTube video · ${videoId}</strong><span>Added just now · ready to watch</span></div><button class="more-button" aria-label="More options"><i data-lucide="more-horizontal"></i></button>`;
   queueList.append(item);
   $('#queueCount').textContent = queueList.querySelectorAll('.queue-item').length;
-  if (notifyServer && socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'queue_add', videoId }));
+  if (notifyServer) sendRealtime({ type: 'queue_add', videoId });
   item.addEventListener('click', (event) => {
     if (event.target.closest('.more-button')) return;
     selectVideo(videoId);
@@ -349,7 +377,7 @@ $('#addVideoButton').addEventListener('click', () => {
 
 $('#clearQueue').addEventListener('click', () => {
   clearQueueView();
-  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'queue_clear' }));
+  sendRealtime({ type: 'queue_clear' });
   showToast('Queue dibersihkan');
 });
 
@@ -359,16 +387,14 @@ messageForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const message = messageInput.value.trim();
   if (!message) return;
-  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'chat', message }));
-  else showToast('Belum terhubung ke room');
+  if (!sendRealtime({ type: 'chat', message })) showToast('Belum terhubung ke room');
   messageInput.value = '';
   $('#chatFeed').scrollTop = $('#chatFeed').scrollHeight;
 });
 
 document.querySelectorAll('.reaction').forEach((button) => {
   button.addEventListener('click', () => {
-    if (socket?.readyState !== WebSocket.OPEN) return showToast('Belum terhubung ke room');
-    socket.send(JSON.stringify({ type: 'reaction', emoji: button.dataset.reaction }));
+    if (!sendRealtime({ type: 'reaction', emoji: button.dataset.reaction })) return showToast('Belum terhubung ke room');
     showToast(`${button.dataset.reaction} dikirim ke room`);
   });
 });
