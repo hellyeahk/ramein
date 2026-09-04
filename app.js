@@ -21,6 +21,7 @@ const joinForm = $('#joinForm');
 const nameInput = $('#nameInput');
 const joinCodeInput = $('#joinCodeInput');
 const initialRoomFromUrl = window.location.hash.match(/room-([a-zA-Z0-9]{4})/)?.[1];
+let pendingInviteRoom = initialRoomFromUrl;
 let roomCode = initialRoomFromUrl || '7F3A';
 let userName = sessionStorage.getItem('ramein-name');
 let roomRef;
@@ -405,6 +406,7 @@ function leaveRoom(force = false, silent = false) {
   currentPresencePeople = [];
   presenceInitialized = false;
   roomCode = '';
+  pendingInviteRoom = null;
   $('#createRoomButton').innerHTML = 'Buat room baru <i data-lucide="arrow-right"></i>';
   $('#showJoinButton').classList.remove('hidden');
   joinForm.classList.remove('visible');
@@ -546,9 +548,11 @@ if (initialRoomFromUrl) {
 
 $('#createRoomButton').addEventListener('click', () => {
   if (!validateName()) return;
-  const destinationRoom = Math.random().toString(36).slice(2, 6).toUpperCase();
-  enterRoom(destinationRoom, true);
-  showToast(`Room ${roomCode} berhasil dibuat`);
+  const destinationRoom = pendingInviteRoom || Math.random().toString(36).slice(2, 6).toUpperCase();
+  const joiningExistingRoom = Boolean(pendingInviteRoom);
+  pendingInviteRoom = null;
+  enterRoom(destinationRoom, !joiningExistingRoom);
+  showToast(joiningExistingRoom ? `Berhasil masuk ke room ${roomCode}` : `Room ${roomCode} berhasil dibuat`);
 });
 
 $('#showJoinButton').addEventListener('click', () => {
