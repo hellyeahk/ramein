@@ -269,8 +269,9 @@ function renderViewers(names = []) {
   visibleNames.forEach((personData) => {
     const person = document.createElement('div');
     person.className = 'watching-person';
+    const adminBadge = personData.id && personData.id === roomState.hostId ? '<span class="admin-badge">ADMIN</span>' : '';
     const kickButton = isHost && personData.id && personData.id !== clientId ? '<button class="kick-button" data-kick-id="' + personData.id + '" title="Kick viewer" aria-label="Kick viewer"><i data-lucide="user-x"></i></button>' : '';
-    person.innerHTML = `<span class="avatar avatar-you"></span><strong></strong><span class="person-status"></span>${kickButton}`;
+    person.innerHTML = `<span class="avatar avatar-you"></span><strong></strong>${adminBadge}<span class="person-status"></span>${kickButton}`;
     person.querySelector('.avatar').textContent = personData.name.slice(0, 1).toUpperCase();
     person.querySelector('strong').textContent = personData.name;
     person.querySelector('.kick-button')?.addEventListener('click', () => kickViewer(personData.id, personData.name));
