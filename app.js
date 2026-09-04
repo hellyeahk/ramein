@@ -31,6 +31,7 @@ let clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(
 let typingTimer;
 let knownPresenceIds = new Set();
 let presenceInitialized = false;
+let isPageUnloading = false;
 let isPlaying = false;
 let ytPlayer;
 let autoplayOnReady = false;
@@ -46,9 +47,13 @@ function updatePlayButton() {
 }
 
 function sendPlaybackState() {
-  if (!ytPlayer?.getCurrentTime) return;
+  if (isPageUnloading || !ytPlayer?.getCurrentTime) return;
   sendRealtime({ type: 'playback', playing: isPlaying, position: Math.round(ytPlayer.getCurrentTime()) });
 }
+
+window.addEventListener('pagehide', () => {
+  isPageUnloading = true;
+});
 
 function sendYouTubeCommand(command, args = []) {
   document.querySelector('#videoPlayer')?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: command, args }), '*');
