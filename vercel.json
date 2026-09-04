@@ -8,6 +8,10 @@
     { "src": "states.css", "use": "@vercel/static" },
     { "src": "assets/**", "use": "@vercel/static" }
   ],
+  "routes": [
+    { "src": "/api/video", "dest": "/api/video.js" },
+    { "src": "/api/upload", "dest": "/api/upload.js" }
+  ],
   "cleanUrls": true,
   "headers": [
     {
