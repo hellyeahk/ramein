@@ -345,9 +345,17 @@ if (userName) nameInput.value = userName;
 if (userName && roomFromUrl) enterRoom(roomCode);
 else nameInput.focus();
 
+if (roomFromUrl) {
+  $('#createRoomButton').innerHTML = 'Join room <i data-lucide="log-in"></i>';
+  $('#showJoinButton').classList.add('hidden');
+  joinForm.classList.remove('visible');
+  lucide.createIcons();
+}
+
 $('#createRoomButton').addEventListener('click', () => {
   if (!validateName()) return;
-  enterRoom(Math.random().toString(36).slice(2, 6).toUpperCase());
+  const destinationRoom = roomFromUrl || Math.random().toString(36).slice(2, 6).toUpperCase();
+  enterRoom(destinationRoom);
   showToast(`Room ${roomCode} berhasil dibuat`);
 });
 
