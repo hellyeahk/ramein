@@ -176,6 +176,11 @@ function playNotificationSound() {
   notificationSound.play().catch(() => {});
 }
 
+function formatAudioTime(seconds) {
+  const value = Math.max(0, Math.floor(Number(seconds) || 0));
+  return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
+}
+
 function appendChatMessage(name, message, media = {}) {
   $('.chat-empty')?.remove();
   const bubble = document.createElement('div');
@@ -198,9 +203,15 @@ function appendChatMessage(name, message, media = {}) {
     audio.addEventListener('contextmenu', (event) => event.preventDefault());
     const playButton = player.querySelector('.voice-play');
     const timeLabel = player.querySelector('.voice-time');
+    let durationLabel = '--:--';
     playButton.addEventListener('click', () => audio.paused ? audio.play() : audio.pause());
+    audio.addEventListener('loadedmetadata', () => {
+      durationLabel = formatAudioTime(audio.duration);
+      timeLabel.textContent = durationLabel;
+    });
     audio.addEventListener('play', () => {
       playButton.innerHTML = '<i data-lucide="pause"></i>';
+      timeLabel.textContent = `0:00 / ${durationLabel}`;
       player.classList.add('playing');
       lucide.createIcons();
     });
@@ -210,8 +221,10 @@ function appendChatMessage(name, message, media = {}) {
       lucide.createIcons();
     });
     audio.addEventListener('timeupdate', () => {
-      const seconds = Math.floor(audio.currentTime || 0);
-      timeLabel.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      timeLabel.textContent = `${formatAudioTime(audio.currentTime)} / ${durationLabel}`;
+    });
+    audio.addEventListener('ended', () => {
+      timeLabel.textContent = durationLabel;
     });
     player.append(audio);
     mediaContainer.append(player);
