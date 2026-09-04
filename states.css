@@ -59,6 +59,7 @@ input[type="text"],input[type="url"]{cursor:text}
 @media(max-width:900px){
   .queue-heading-actions{gap:6px}
   .top-actions .queue-menu-button{display:grid}
+  .up-next{display:none}
   .queue-list{
     position:fixed;
     top:0;
