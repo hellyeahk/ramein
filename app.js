@@ -179,7 +179,7 @@ function connectRealtime() {
     clearQueueView();
     (roomState.queue || []).forEach((videoId) => addQueueItem(videoId, false));
     if (roomState.currentVideoId && roomState.currentVideoId !== selectedVideoId) selectVideo(roomState.currentVideoId, false);
-    else showEmptyVideoState();
+      else if (!roomState.currentVideoId && selectedVideoId) showEmptyVideoState();
     if (roomState.lastActor !== clientId) setRemotePlayback(roomState.playing, roomState.position);
   });
   onChildAdded(query(ref(roomRef, 'events'), limitToLast(50)), (snapshot) => {
@@ -420,7 +420,7 @@ messageForm.addEventListener('submit', (event) => {
 
 document.querySelectorAll('.reaction').forEach((button) => {
   button.addEventListener('click', () => {
-    if (!sendRealtime({ type: 'reaction', emoji: button.dataset.reaction })) return showToast('Belum terhubung ke room');
+    if (!sendRealtime({ type: 'chat', message: button.dataset.reaction })) return showToast('Belum terhubung ke room');
     showToast(`${button.dataset.reaction} dikirim ke room`);
   });
 });
@@ -453,10 +453,6 @@ progressBar.addEventListener('pointerup', () => {
 progressBar.addEventListener('input', () => {
   const seconds = Math.round((Number(progressBar.value) / 100) * (ytPlayer?.getDuration?.() || 3764));
   currentTime.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-  if (ytPlayer?.seekTo) {
-    ytPlayer.seekTo(seconds, true);
-    sendPlaybackState();
-  } else sendYouTubeCommand('seekTo', [seconds, true]);
 });
 
 function updateProgress() {
