@@ -360,7 +360,7 @@ function connectRealtime() {
       currentChatEventIds.add(messageSnapshot.key);
       if (message.type === 'chat') appendChatMessage(message.name, message.message, message.media);
       if (message.type === 'reaction' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.clientId !== clientId) showFloatingReaction(message.message);
-      if (chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.name !== userName) playNotificationSound();
+      if (message.type === 'chat' && chatEventsInitialized && !knownChatEventIds.has(messageSnapshot.key) && message.name !== userName) playNotificationSound();
     });
     knownChatEventIds = currentChatEventIds;
     chatEventsInitialized = true;
