@@ -197,6 +197,20 @@ function connectRealtime() {
   showToast('Terhubung ke Firebase realtime');
 }
 
+function leaveRoom() {
+  presenceRef?.remove();
+  roomRef?.off();
+  presenceRef?.off();
+  roomRef = null;
+  presenceRef = null;
+  $('#viewerModal').classList.add('hidden');
+  welcomeModal.classList.remove('hidden');
+  $('#viewerCount').textContent = 'connecting...';
+  document.querySelector('.online-count').lastChild.textContent = ' connecting...';
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  showToast('Kamu sudah keluar dari room');
+}
+
 function sendRealtime(message) {
   if (!roomRef) return false;
   if (message.type === 'chat' || message.type === 'reaction') {
@@ -318,6 +332,7 @@ $('#roomButton').addEventListener('click', () => $('#viewerModal').classList.rem
 $('#closeShareButton').addEventListener('click', () => $('#shareModal').classList.add('hidden'));
 $('#closeShareButton2').addEventListener('click', () => $('#shareModal').classList.add('hidden'));
 $('#closeViewerButton').addEventListener('click', () => $('#viewerModal').classList.add('hidden'));
+$('#leaveRoomButton').addEventListener('click', leaveRoom);
 $('#copyLinkButton').addEventListener('click', async () => {
   const roomLink = $('#shareLink').value;
   try {
