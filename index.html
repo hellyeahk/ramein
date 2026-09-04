@@ -24,6 +24,7 @@
         <a class="brand" href="#" aria-label="Ramein home"><span class="brand-mark">r</span><span>ramein</span></a>
         <button class="room-presence room-button" id="roomButton" aria-label="Open room details"><span class="live-dot"></span><span>ROOM <b id="roomCode">7F3A</b></span><span class="presence-divider"></span><span id="viewerCount">connecting...</span><i data-lucide="chevron-down"></i></button>
         <div class="top-actions">
+          <button class="icon-button queue-menu-button" id="queueMenuButton" title="Show queue" aria-label="Show queue"><i data-lucide="menu"></i></button>
           <button class="icon-button" id="inviteButton" title="Invite friends" aria-label="Invite friends"><i data-lucide="user-plus"></i></button>
           <button class="avatar avatar-you" id="profileButton" title="Change your name" aria-label="Change your name">Y</button>
         </div>
@@ -47,8 +48,9 @@
             <button class="queue-button" id="queueButton"><i data-lucide="search"></i> Find a video</button>
           </div>
           <section class="up-next">
-            <div class="section-heading"><div><p class="eyebrow">UP NEXT</p><h2>Queue <span>· <b id="queueCount">0</b> videos</span></h2></div><div class="queue-heading-actions"><button class="icon-button queue-menu-button" id="queueMenuButton" title="Show queue" aria-label="Show queue"><i data-lucide="menu"></i></button><button class="text-button" id="clearQueue">Clear all</button></div></div>
-            <div class="queue-list" id="queueList"><div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link YouTube untuk mulai menyusun tontonan.</span></div></div>
+            <div class="section-heading"><div><p class="eyebrow">UP NEXT</p><h2>Queue <span>· <b id="queueCount">0</b> videos</span></h2></div><div class="queue-heading-actions"><button class="text-button" id="clearQueue">Clear all</button></div></div>
+            <div class="queue-list" id="queueList"><div class="queue-list-head"><span>Queue</span><button class="icon-button queue-close-button" id="queueCloseButton" aria-label="Close queue"><i data-lucide="x"></i></button></div><div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link YouTube untuk mulai menyusun tontonan.</span></div></div>
+            <div class="queue-backdrop" id="queueBackdrop"></div>
           </section>
         </div>
 
@@ -109,7 +111,6 @@
     <div class="toast" id="toast" role="status"></div>
     <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-storage-compat.js"></script>
     <script>
       const firebaseConfig = {
         apiKey: 'AIzaSyDuEpkc2Q7C76AydOGS3eWKK3iBkVWeG_A',

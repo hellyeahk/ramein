@@ -1,5 +1,4 @@
 const firebaseDatabase = firebase.database();
-const firebaseStorage = firebase.storage();
 const ref = (parent, path) => typeof parent.ref === 'function' ? parent.ref(path) : parent.child(path);
 const onValue = (target, handler) => target.on('value', handler);
 const onDisconnect = (target) => target.onDisconnect();
@@ -244,7 +243,7 @@ function connectRealtime() {
     if (!snapshot.val()) return;
     set(ref(roomRef, `kicked/${clientId}`), null);
     showToast('Kamu telah dikeluarkan dari room');
-    leaveRoom(true);
+    leaveRoom(true, true);
   });
   onValue(ref(roomRef, 'presence'), (snapshot) => {
     const presence = snapshot.val() || {};
@@ -310,7 +309,7 @@ function kickViewer(viewerId, viewerName) {
   showToast(`${viewerName} dikeluarkan dari room`);
 }
 
-function leaveRoom(force = false) {
+function leaveRoom(force = false, silent = false) {
   if (!force && !window.confirm('Keluar dari room ini?')) return;
   clearTimeout(typingTimer);
   presenceRef?.update({ isTyping: false });
@@ -336,7 +335,7 @@ function leaveRoom(force = false) {
   $('#viewerCount').textContent = 'connecting...';
   document.querySelector('.online-count').lastChild.textContent = ' connecting...';
   history.replaceState(null, '', window.location.pathname + window.location.search);
-  showToast('Kamu sudah keluar dari room');
+  if (!silent) showToast('Kamu sudah keluar dari room');
 }
 
 function sendRealtime(message) {
@@ -383,11 +382,17 @@ function sendRealtime(message) {
 
 async function sendMediaMessage(file, type) {
   if (!roomRef || !file) return;
-  const fileRef = firebaseStorage.ref(`rooms/${roomCode}/media/${clientId}-${Date.now()}-${file.name}`);
+  const safeName = (file.name || (type === 'voice' ? 'voice-note.webm' : 'photo')).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filename = `rooms/${roomCode}/media/${clientId}-${Date.now()}-${safeName}`;
   try {
     showToast(type === 'photo' ? 'Mengunggah foto...' : 'Mengunggah voice note...');
-    await fileRef.put(file);
-    const url = await fileRef.getDownloadURL();
+    const uploadResponse = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    });
+    if (!uploadResponse.ok) throw new Error('Upload failed');
+    const { url } = await uploadResponse.json();
     await push(ref(roomRef, 'events'), { type: 'chat', message: type === 'photo' ? '📷 Foto' : '🎙️ Voice note', media: { type, url }, name: userName || 'Guest', createdAt: Date.now() });
     showToast(type === 'photo' ? 'Foto terkirim' : 'Voice note terkirim');
   } catch {
@@ -541,7 +546,15 @@ $('#closeShareButton').addEventListener('click', () => $('#shareModal').classLis
 $('#closeShareButton2').addEventListener('click', () => $('#shareModal').classList.add('hidden'));
 $('#closeViewerButton').addEventListener('click', () => $('#viewerModal').classList.add('hidden'));
 $('#leaveRoomButton').addEventListener('click', leaveRoom);
-$('#queueMenuButton').addEventListener('click', () => $('#queueList').classList.toggle('queue-open'));
+function toggleQueueDrawer(open) {
+  const shouldOpen = typeof open === 'boolean' ? open : !$('#queueList').classList.contains('queue-open');
+  $('#queueList').classList.toggle('queue-open', shouldOpen);
+  $('#queueBackdrop').classList.toggle('queue-open', shouldOpen);
+  document.body.classList.toggle('queue-drawer-open', shouldOpen);
+}
+$('#queueMenuButton').addEventListener('click', () => toggleQueueDrawer());
+$('#queueCloseButton').addEventListener('click', () => toggleQueueDrawer(false));
+$('#queueBackdrop').addEventListener('click', () => toggleQueueDrawer(false));
 $('#copyLinkButton').addEventListener('click', async () => {
   const roomLink = $('#shareLink').value;
   try {
@@ -593,6 +606,7 @@ function addQueueItem(videoId, notifyServer = true) {
     if (event.target.closest('.queue-actions')) return;
     selectVideo(videoId);
     showToast('Video dimuat ke player utama');
+    if (window.matchMedia('(max-width:900px)').matches) toggleQueueDrawer(false);
   });
   item.querySelectorAll('.queue-action').forEach((button) => {
     button.addEventListener('click', (event) => {

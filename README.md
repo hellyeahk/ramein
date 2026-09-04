@@ -13,6 +13,12 @@ Metadata video diambil melalui YouTube oEmbed. Endpoint pencarian YouTube masih 
 
 Import repository ini ke Vercel tanpa environment variable. Vercel otomatis menyajikan file frontend dan endpoint `/api/video` serta `/api/search` sebagai serverless functions.
 
-Fitur paste link dan pemutaran video tidak memerlukan YouTube API key. Chat, queue bersama, playback bersama, reaction, dan presence menggunakan Firebase Realtime Database sehingga tetap bisa berjalan dalam mode Vercel-only. Foto dan voice note menggunakan Firebase Storage.
+Fitur paste link dan pemutaran video tidak memerlukan YouTube API key. Chat, queue bersama, playback bersama, reaction, dan presence menggunakan Firebase Realtime Database sehingga tetap bisa berjalan dalam mode Vercel-only. Foto dan voice note menggunakan Vercel Blob lewat endpoint `/api/upload`.
 
-Aktifkan Realtime Database dan Storage di Firebase Console, lalu isi konfigurasi Firebase di `index.html`. Untuk testing awal, database dan Storage boleh memakai Test mode; sebelum dipublikasikan, ubah rules agar akses tidak terbuka tanpa batas.
+## Setup Vercel Blob
+
+1. Di dashboard Vercel, buka project ini → tab **Storage** → **Create Database** → pilih **Blob**.
+2. Hubungkan (Connect) Blob store itu ke project ini. Vercel otomatis menambahkan environment variable `BLOB_READ_WRITE_TOKEN`, tidak perlu diisi manual dan tidak butuh kartu kredit di plan Hobby.
+3. Redeploy project. Fitur foto & voice note langsung aktif.
+
+Batas plan Hobby: 1GB penyimpanan dan ukuran body request per function sekitar 4.5MB, jadi foto berukuran sangat besar bisa gagal diupload — cukup untuk pemakaian personal biasa.
