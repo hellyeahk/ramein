@@ -184,8 +184,8 @@ function appendChatMessage(name, message, media = {}) {
   bubble.innerHTML = `<span class="avatar avatar-you"></span><div><div class="name-line"><strong></strong><time>now</time></div><p></p><div class="chat-media"></div></div>`;
   bubble.querySelector('.avatar').textContent = name.slice(0, 1).toUpperCase();
   bubble.querySelector('strong').textContent = name;
-  bubble.querySelector('p').textContent = media.url ? '' : message;
-  if (media.type === 'photo' && media.url) bubble.querySelector('.chat-media').innerHTML = `<a href="${media.url}" target="_blank" rel="noreferrer"><img src="${media.url}" alt="Photo from ${name}"></a>`;
+  bubble.querySelector('p').textContent = message;
+  if (media.type === 'photo' && media.url) bubble.querySelector('.chat-media').innerHTML = `<img src="${media.url}" alt="Photo from ${name}">`;
   if (media.type === 'voice' && media.url) bubble.querySelector('.chat-media').innerHTML = `<audio controls src="${media.url}"></audio>`;
   $('#chatFeed').append(bubble);
   $('#chatFeed').scrollTop = $('#chatFeed').scrollHeight;
@@ -695,15 +695,23 @@ function attachMedia(file, type) {
   if (!file) return;
   clearAttachment();
   pendingMedia = { file, type, previewUrl: URL.createObjectURL(file) };
+  const preview = $('#attachmentPreview');
+  const visual = document.createElement(type === 'photo' ? 'img' : 'audio');
+  visual.className = 'attachment-visual';
+  visual.src = pendingMedia.previewUrl;
+  if (type === 'voice') visual.controls = true;
+  preview.prepend(visual);
   $('#attachmentName').textContent = type === 'photo' ? file.name : 'Voice note siap dikirim';
-  $('#attachmentPreview').classList.remove('hidden');
+  preview.classList.remove('hidden');
   lucide.createIcons();
 }
 
 function clearAttachment() {
   if (pendingMedia?.previewUrl) URL.revokeObjectURL(pendingMedia.previewUrl);
   pendingMedia = null;
-  $('#attachmentPreview').classList.add('hidden');
+  const preview = $('#attachmentPreview');
+  preview.classList.add('hidden');
+  preview.querySelector('.attachment-visual')?.remove();
   $('#attachmentName').textContent = '';
 }
 
