@@ -187,8 +187,7 @@ function renderViewers(names = []) {
 }
 
 function clearQueueView() {
-  queueList.innerHTML = '<div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link YouTube untuk mulai menyusun tontonan.</span><button class="empty-action" id="emptyQueueButton">Add first video</button></div>';
-  $('#emptyQueueButton').addEventListener('click', openVideoModal);
+  queueList.innerHTML = '<div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link YouTube untuk mulai menyusun tontonan.</span></div>';
   $('#queueCount').textContent = '0';
   lucide.createIcons();
 }
@@ -476,7 +475,6 @@ function addQueueItem(videoId, notifyServer = true) {
   lucide.createIcons();
 }
 
-$('#emptyQueueButton').addEventListener('click', openVideoModal);
 $('#queueButton').addEventListener('click', openVideoModal);
 $('#closeVideoButton').addEventListener('click', () => videoModal.classList.add('hidden'));
 $('#cancelVideoButton').addEventListener('click', () => videoModal.classList.add('hidden'));
