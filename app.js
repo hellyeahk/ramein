@@ -31,6 +31,7 @@ let clientId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(
 let typingTimer;
 let isPlaying = false;
 let ytPlayer;
+let autoplayOnReady = false;
 let syncingRemotePlayback = false;
 let selectedVideoId = null;
 let controlsHideTimer;
@@ -76,6 +77,8 @@ function updateNowPlayingFromPlayer() {
 
 function selectVideo(videoId, notifyRoom = true) {
   selectedVideoId = videoId;
+  document.querySelectorAll('.queue-item').forEach((item) => item.classList.toggle('active', item.dataset.videoId === videoId));
+  document.querySelectorAll('.queue-now-playing').forEach((badge) => badge.classList.toggle('hidden', badge.closest('.queue-item')?.dataset.videoId !== videoId));
   showVideoControls();
   $('#videoFrame').classList.remove('empty-video');
   $('#noVideoState').classList.add('hidden');
@@ -90,7 +93,16 @@ function playNextVideo() {
   const queue = Array.isArray(roomState.queue) ? roomState.queue : [];
   const currentIndex = queue.indexOf(selectedVideoId);
   const nextVideoId = currentIndex >= 0 ? queue[currentIndex + 1] : queue[0];
-  if (nextVideoId) selectVideo(nextVideoId);
+  if (!nextVideoId) return;
+  if (!window.confirm('Video selesai. Lanjutkan ke video berikutnya?')) {
+    isPlaying = false;
+    updatePlayButton();
+    return;
+  }
+  selectVideo(nextVideoId);
+  ytPlayer?.playVideo?.();
+  isPlaying = true;
+  sendRealtime({ type: 'playback', playing: true, position: 0 });
 }
 
 function initYouTubePlayer() {
@@ -102,6 +114,13 @@ function initYouTubePlayer() {
         ytPlayer = event.target;
         updateNowPlayingFromPlayer() || updateNowPlaying(selectedVideoId);
         setTimeout(updateNowPlayingFromPlayer, 1800);
+        if (autoplayOnReady) {
+          ytPlayer.playVideo();
+          isPlaying = true;
+          autoplayOnReady = false;
+          sendRealtime({ type: 'playback', playing: true, position: 0 });
+          updatePlayButton();
+        }
         updateProgress();
       },
       onStateChange: (event) => {
@@ -259,8 +278,22 @@ function sendRealtime(message) {
     });
     return true;
   }
+  if (message.type === 'queue_remove' || message.type === 'queue_move') {
+    runTransaction(ref(roomRef, 'state/queue'), (queue = []) => {
+      const nextQueue = Array.isArray(queue) ? [...queue] : [];
+      const index = nextQueue.indexOf(message.videoId);
+      if (index < 0) return nextQueue;
+      if (message.type === 'queue_remove') nextQueue.splice(index, 1);
+      else {
+        const targetIndex = Math.max(0, Math.min(nextQueue.length - 1, index + message.direction));
+        [nextQueue[index], nextQueue[targetIndex]] = [nextQueue[targetIndex], nextQueue[index]];
+      }
+      return nextQueue;
+    });
+    return true;
+  }
   if (message.type === 'queue_clear') {
-    set(ref(roomRef, 'state/queue'), []);
+    update(ref(roomRef, 'state'), { queue: [], currentVideoId: null, playing: false, position: 0, lastActor: clientId });
     return true;
   }
   if (message.type === 'video_select') {
@@ -416,7 +449,7 @@ function addQueueItem(videoId, notifyServer = true) {
   const item = document.createElement('article');
   item.className = 'queue-item';
   item.dataset.videoId = videoId;
-  item.innerHTML = `<span class="drag"><i data-lucide="grip-vertical"></i></span><div class="thumb youtube-thumb" style="background-image:url('https://img.youtube.com/vi/${videoId}/mqdefault.jpg')"></div><div class="queue-copy"><strong>YouTube video · ${videoId}</strong><span>Added just now · ready to watch</span></div><button class="more-button" aria-label="More options"><i data-lucide="more-horizontal"></i></button>`;
+  item.innerHTML = `<span class="drag"><i data-lucide="grip-vertical"></i></span><div class="thumb youtube-thumb" style="background-image:url('https://img.youtube.com/vi/${videoId}/mqdefault.jpg')"></div><div class="queue-copy"><span class="queue-now-playing hidden">NOW PLAYING</span><strong>YouTube video · ${videoId}</strong><span>Added just now · ready to watch</span></div><div class="queue-actions"><button class="queue-action" data-action="up" aria-label="Move video up"><i data-lucide="chevron-up"></i></button><button class="queue-action" data-action="down" aria-label="Move video down"><i data-lucide="chevron-down"></i></button><button class="queue-action danger" data-action="remove" aria-label="Remove video"><i data-lucide="trash-2"></i></button></div>`;
   queueList.append(item);
   $('#queueCount').textContent = queueList.querySelectorAll('.queue-item').length;
   fetch(`/api/video?id=${encodeURIComponent(videoId)}`)
@@ -427,10 +460,18 @@ function addQueueItem(videoId, notifyServer = true) {
     .catch(() => {});
   if (notifyServer) sendRealtime({ type: 'queue_add', videoId });
   item.addEventListener('click', (event) => {
-    if (event.target.closest('.more-button')) return;
+    if (event.target.closest('.queue-actions')) return;
     selectVideo(videoId);
     showToast('Video dimuat ke player utama');
   });
+  item.querySelectorAll('.queue-action').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const action = button.dataset.action;
+      sendRealtime(action === 'remove' ? { type: 'queue_remove', videoId } : { type: 'queue_move', videoId, direction: action === 'up' ? -1 : 1 });
+    });
+  });
+  if (selectedVideoId === videoId) selectVideo(videoId, false);
   lucide.createIcons();
 }
 
@@ -446,7 +487,21 @@ $('#addVideoButton').addEventListener('click', () => {
     return;
   }
   videoError.classList.remove('visible');
+  const isFirstVideo = !selectedVideoId && !queueList.querySelector('.queue-item');
   addQueueItem(videoId);
+  if (isFirstVideo) {
+    autoplayOnReady = true;
+    selectVideo(videoId);
+    setTimeout(() => {
+      if (ytPlayer?.playVideo) {
+        ytPlayer.playVideo();
+        isPlaying = true;
+        autoplayOnReady = false;
+        sendRealtime({ type: 'playback', playing: true, position: 0 });
+        updatePlayButton();
+      }
+    }, 800);
+  }
   videoUrlInput.value = '';
   videoModal.classList.add('hidden');
   showToast('Video ditambahkan ke queue');
