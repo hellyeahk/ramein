@@ -570,6 +570,7 @@ function toggleQueueDrawer(open) {
   document.body.classList.toggle('queue-drawer-open', shouldOpen);
 }
 $('#queueMenuButton').addEventListener('click', () => toggleQueueDrawer());
+$('#mobileQueueButton').addEventListener('click', openVideoModal);
 $('#queueCloseButton').addEventListener('click', () => toggleQueueDrawer(false));
 $('#queueBackdrop').addEventListener('click', () => toggleQueueDrawer(false));
 $('#copyLinkButton').addEventListener('click', async () => {
