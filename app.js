@@ -33,6 +33,7 @@ let isPlaying = false;
 let ytPlayer;
 let autoplayOnReady = false;
 let syncingRemotePlayback = false;
+let suppressPlaybackUntil = 0;
 let selectedVideoId = null;
 let controlsHideTimer;
 
@@ -121,6 +122,7 @@ function initYouTubePlayer() {
         ytPlayer = event.target;
         updateNowPlayingFromPlayer() || updateNowPlaying(selectedVideoId);
         setTimeout(updateNowPlayingFromPlayer, 1800);
+        if (roomState.currentVideoId === selectedVideoId) setRemotePlayback(roomState.playing, roomState.position);
         if (autoplayOnReady) {
           ytPlayer.playVideo();
           isPlaying = true;
@@ -139,7 +141,7 @@ function initYouTubePlayer() {
         if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
           isPlaying = event.data === YT.PlayerState.PLAYING;
           updatePlayButton();
-          if (!syncingRemotePlayback) sendPlaybackState();
+          if (!syncingRemotePlayback && Date.now() >= suppressPlaybackUntil) sendPlaybackState();
         }
       }
     }
@@ -207,6 +209,7 @@ function connectRealtime() {
     return;
   }
   roomRef = ref(database, `rooms/${roomCode}`);
+  suppressPlaybackUntil = Date.now() + 3000;
   presenceRef = ref(roomRef, `presence/${clientId}`);
   set(presenceRef, { name: userName || 'Guest', isTyping: false });
   onDisconnect(presenceRef).remove();
@@ -383,6 +386,7 @@ function setRemotePlayback(playing, position) {
   isPlaying = playing;
   updatePlayButton();
   if (!ytPlayer?.seekTo) return;
+  suppressPlaybackUntil = Date.now() + 1500;
   syncingRemotePlayback = true;
   ytPlayer.seekTo(Number(position) || 0, true);
   if (playing) ytPlayer.playVideo();
