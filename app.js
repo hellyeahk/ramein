@@ -77,8 +77,7 @@ function updateNowPlayingFromPlayer() {
 
 function selectVideo(videoId, notifyRoom = true) {
   selectedVideoId = videoId;
-  document.querySelectorAll('.queue-item').forEach((item) => item.classList.toggle('active', item.dataset.videoId === videoId));
-  document.querySelectorAll('.queue-now-playing').forEach((badge) => badge.classList.toggle('hidden', badge.closest('.queue-item')?.dataset.videoId !== videoId));
+  updateQueueActiveState();
   showVideoControls();
   $('#videoFrame').classList.remove('empty-video');
   $('#noVideoState').classList.add('hidden');
@@ -87,6 +86,14 @@ function selectVideo(videoId, notifyRoom = true) {
   updateNowPlaying(videoId);
   setTimeout(updateNowPlayingFromPlayer, 1200);
   if (notifyRoom) sendRealtime({ type: 'video_select', videoId });
+}
+
+function updateQueueActiveState() {
+  document.querySelectorAll('.queue-item').forEach((item) => {
+    const isActive = item.dataset.videoId === selectedVideoId;
+    item.classList.toggle('active', isActive);
+    item.querySelector('.queue-now-playing')?.classList.toggle('hidden', !isActive);
+  });
 }
 
 function playNextVideo() {
@@ -471,7 +478,7 @@ function addQueueItem(videoId, notifyServer = true) {
       sendRealtime(action === 'remove' ? { type: 'queue_remove', videoId } : { type: 'queue_move', videoId, direction: action === 'up' ? -1 : 1 });
     });
   });
-  if (selectedVideoId === videoId) selectVideo(videoId, false);
+  updateQueueActiveState();
   lucide.createIcons();
 }
 
