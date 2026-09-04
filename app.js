@@ -257,6 +257,7 @@ function leaveRoom() {
   roomState = {};
   roomRef = null;
   presenceRef = null;
+  roomCode = '';
   $('#viewerModal').classList.add('hidden');
   welcomeModal.classList.remove('hidden');
   $('#viewerCount').textContent = 'connecting...';
@@ -335,7 +336,7 @@ function validateName() {
 }
 
 if (userName) nameInput.value = userName;
-if (userName) enterRoom(roomCode);
+if (userName && roomFromUrl) enterRoom(roomCode);
 else nameInput.focus();
 
 $('#createRoomButton').addEventListener('click', () => {
