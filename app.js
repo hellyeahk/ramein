@@ -147,7 +147,6 @@ function initYouTubePlayer() {
         if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
           isPlaying = event.data === YT.PlayerState.PLAYING;
           updatePlayButton();
-          if (!syncingRemotePlayback && Date.now() >= suppressPlaybackUntil) sendPlaybackState();
         }
       }
     }
@@ -338,6 +337,7 @@ function sendRealtime(message) {
 }
 
 function enterRoom(code) {
+  isPageUnloading = false;
   roomRef?.off();
   presenceRef?.off();
   clearChatView();
