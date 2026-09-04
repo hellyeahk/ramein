@@ -105,6 +105,22 @@
       </section>
     </div>
     <div class="toast" id="toast" role="status"></div>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: 'ISI_API_KEY',
+        authDomain: 'ISI_PROJECT_ID.firebaseapp.com',
+        databaseURL: 'https://ISI_PROJECT_ID-default-rtdb.firebaseio.com',
+        projectId: 'ISI_PROJECT_ID',
+        storageBucket: 'ISI_PROJECT_ID.firebasestorage.app',
+        messagingSenderId: 'ISI_MESSAGING_SENDER_ID',
+        appId: 'ISI_APP_ID'
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      window.rameinDatabase = firebase.database();
+    </script>
     <script src="app.js"></script>
   </body>
 </html>
