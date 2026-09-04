@@ -195,6 +195,8 @@ function appendChatMessage(name, message, media = {}, authorId = '') {
   $('.chat-empty')?.remove();
   const bubble = document.createElement('div');
   bubble.className = 'chat-message';
+  const mentionPattern = userName ? new RegExp(`(^|\\s)@${userName.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}(?=\\s|$)`, 'i') : null;
+  if (mentionPattern?.test(message || '')) bubble.classList.add('mentioned-user');
   bubble.dataset.author = name;
   const adminBadge = authorId && authorId === roomState.hostId ? '<span class="admin-badge">ADMIN</span>' : '';
   bubble.innerHTML = `<span class="avatar avatar-you"></span><div><div class="name-line"><strong></strong>${adminBadge}<time>now</time></div><p></p><div class="chat-media"></div></div>`;
