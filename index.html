@@ -10,7 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="states.css" />
-    <style>#videoPlayer{width:100%;height:100%}#videoPlayer iframe{width:100%;height:100%;border:0;display:block}</style>
+    <style>#videoPlayer{width:100%;height:100%}#videoPlayer iframe,#videoPlayer video{width:100%;height:100%;border:0;display:block;background:#000}#videoPlayer video{object-fit:contain}</style>
+      <style>#videoPlayer{width:100%;height:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:#000}#videoPlayer iframe,#videoPlayer video{width:100%;height:100%;max-width:100%;max-height:100%;border:0;display:block;background:#000}#videoPlayer video{object-fit:contain}</style>
     <style>.video-overlay{inset:auto;left:50%;bottom:50%;width:0;height:0;background:none;pointer-events:none}.big-play{position:absolute;left:-33px;top:-33px;pointer-events:auto}</style>
     <style>.video-frame iframe{pointer-events:none}.video-controls{position:absolute;z-index:4;left:16px;right:16px;bottom:14px;display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0e0f12d9;color:#d9d6ce;font:500 10px 'DM Mono',monospace}.video-controls input{flex:1;min-width:0;height:3px;accent-color:var(--accent)}.video-controls button{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#111}.video-controls button svg{width:12px;fill:#111}.video-controls button svg[data-lucide=pause]{fill:none}.video-frame{cursor:pointer}.video-frame .video-topline,.video-frame .video-controls,.video-frame .big-play{cursor:default}.video-frame .video-controls button,.video-frame .big-play{cursor:pointer}</style>
     <style>.watching-list{display:grid;gap:8px;margin:4px 0 20px}.watching-list-title{color:var(--dim);font:500 9px 'DM Mono',monospace;letter-spacing:1px}.watching-person{display:flex;align-items:center;gap:8px;color:#d8d5ce;font-size:11px}.watching-person .avatar{width:24px;height:24px}.watching-person .person-status{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:auto}</style>
@@ -36,7 +37,7 @@
           <div class="video-frame" id="videoFrame">
             <div class="video-topline"><span class="on-air"><span class="live-dot"></span> LIVE ROOM</span><span class="sync-status"><i data-lucide="link-2"></i> Synced</span></div>
             <div id="videoPlayer"></div>
-            <div class="no-video-state" id="noVideoState"><i data-lucide="clapperboard"></i><strong>Belum ada video</strong><span>Tambahkan link YouTube ke queue, lalu pilih videonya untuk mulai menonton.</span></div>
+            <div class="no-video-state" id="noVideoState"><i data-lucide="clapperboard"></i><strong>Belum ada video</strong><span>Tambahkan link YouTube, Drive, Bilibili, atau link video langsung untuk mulai menonton.</span></div>
             <div class="reaction-overlay" id="reactionOverlay" aria-live="polite"></div>
             <div class="video-overlay"><button class="big-play" id="playButton" aria-label="Play or pause video"><i data-lucide="play"></i></button></div>
             <div class="video-controls"><button class="skip-button" id="skipBackButton" aria-label="Back 5 seconds"><i data-lucide="rotate-ccw"></i><span>5</span></button><span id="currentTime">00:00</span><input type="range" id="progressBar" min="0" max="100" value="0" aria-label="Video progress"><span id="durationTime">00:00</span><button id="fullscreenButton" aria-label="Enlarge video"><i data-lucide="maximize"></i></button><button class="skip-button" id="skipForwardButton" aria-label="Forward 5 seconds"><i data-lucide="rotate-cw"></i><span>5</span></button></div>
@@ -51,7 +52,7 @@
           </div>
           <section class="up-next">
             <div class="section-heading"><div><p class="eyebrow">UP NEXT</p><h2>Queue <span>· <b id="queueCount">0</b> videos</span></h2></div><div class="queue-heading-actions"><button class="text-button" id="clearQueue">Clear all</button></div></div>
-            <div class="queue-list" id="queueList"><div class="queue-list-head"><span>Queue</span><button class="icon-button queue-close-button" id="queueCloseButton" aria-label="Close queue"><i data-lucide="x"></i></button></div><div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link YouTube untuk mulai menyusun tontonan.</span></div></div>
+            <div class="queue-list" id="queueList"><div class="queue-list-head"><span>Queue</span><button class="icon-button queue-close-button" id="queueCloseButton" aria-label="Close queue"><i data-lucide="x"></i></button></div><div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link video apa saja untuk mulai menyusun tontonan.</span></div></div>
             <div class="queue-backdrop" id="queueBackdrop"></div>
           </section>
         </div>
@@ -115,10 +116,10 @@
       <section class="modal-card video-modal-card" role="dialog" aria-modal="true" aria-labelledby="videoTitle">
         <button class="close-modal" id="closeVideoButton" aria-label="Close"><i data-lucide="x"></i></button>
         <p class="eyebrow">ROOM QUEUE</p><h2 id="videoTitle">Add a video<br><em>to watch next.</em></h2>
-        <p class="modal-copy">Paste link YouTube yang mau ditonton bareng. Video akan masuk ke queue room.</p>
-        <label class="field-label" for="videoUrlInput">YouTube URL</label>
-        <input class="modal-input" id="videoUrlInput" type="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
-        <p class="input-error" id="videoError">Masukkan URL YouTube yang valid.</p>
+        <p class="modal-copy">Paste link publik YouTube, Google Drive, Bilibili, atau file video langsung. Video akan masuk ke queue room.</p>
+        <label class="field-label" for="videoUrlInput">Video URL</label>
+        <input class="modal-input" id="videoUrlInput" type="url" placeholder="https://..." autocomplete="off" />
+        <p class="input-error" id="videoError">Masukkan link player/video publik, bukan link halaman web.</p>
         <div class="modal-actions modal-actions-end"><button class="secondary-button" id="cancelVideoButton">Cancel</button><button class="primary-button" id="addVideoButton">Add to queue <i data-lucide="plus"></i></button></div>
       </section>
     </div>

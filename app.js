@@ -44,6 +44,8 @@ let presenceInitialized = false;
 let isPageUnloading = false;
 let isPlaying = false;
 let ytPlayer;
+let mediaVideo;
+let currentVideo = null;
 let autoplayOnReady = false;
 let syncingRemotePlayback = false;
 let suppressPlaybackUntil = 0;
@@ -57,11 +59,23 @@ function updatePlayButton() {
   const icon = isPlaying ? 'pause' : 'play';
   playButton.innerHTML = `<i data-lucide="${icon}"></i>`;
   lucide.createIcons();
+  updatePlaybackControls();
+}
+
+function updatePlaybackControls() {
+  ['playButton', 'skipBackButton', 'skipForwardButton', 'progressBar'].forEach((id) => {
+    const control = document.getElementById(id);
+    if (control) control.disabled = !isHost;
+  });
+}
+
+function getMediaPosition() {
+  return ytPlayer?.getCurrentTime?.() || mediaVideo?.currentTime || 0;
 }
 
 function sendPlaybackState() {
-  if (isPageUnloading || !ytPlayer?.getCurrentTime) return;
-  sendRealtime({ type: 'playback', playing: isPlaying, position: Math.round(ytPlayer.getCurrentTime()) });
+  if (isPageUnloading || !isHost) return;
+  sendRealtime({ type: 'playback', playing: isPlaying, position: Math.round(getMediaPosition()) });
 }
 
 window.addEventListener('pagehide', () => {
@@ -96,17 +110,28 @@ function updateNowPlayingFromPlayer() {
   return true;
 }
 
-function selectVideo(videoId, notifyRoom = true) {
-  selectedVideoId = videoId;
+function normalizeQueueItem(item) {
+  if (typeof item === 'string') {
+    return { id: `youtube:${item}`, type: 'youtube', videoId: item, url: `https://www.youtube.com/watch?v=${item}`, title: `YouTube video · ${item}` };
+  }
+  return item;
+}
+
+function findQueueItem(id) {
+  return (roomState.queue || []).map(normalizeQueueItem).find((item) => item?.id === id || item?.url === id || item?.videoId === id);
+}
+
+function selectVideo(videoOrId, notifyRoom = true) {
+  const item = typeof videoOrId === 'string' ? findQueueItem(videoOrId) : normalizeQueueItem(videoOrId);
+  if (!item) return;
+  currentVideo = item;
+  selectedVideoId = item.id;
   updateQueueActiveState();
   showVideoControls();
   $('#videoFrame').classList.remove('empty-video');
   $('#noVideoState').classList.add('hidden');
-  if (!ytPlayer && window.YT?.Player) initYouTubePlayer();
-  if (ytPlayer?.loadVideoById) ytPlayer.loadVideoById(videoId);
-  updateNowPlaying(videoId);
-  setTimeout(updateNowPlayingFromPlayer, 1200);
-  if (notifyRoom) sendRealtime({ type: 'video_select', videoId });
+  renderVideoSource(item);
+  if (notifyRoom) sendRealtime({ type: 'video_select', videoId: item.id });
 }
 
 function updateQueueActiveState() {
@@ -118,9 +143,10 @@ function updateQueueActiveState() {
 }
 
 function playNextVideo() {
-  const queue = Array.isArray(roomState.queue) ? roomState.queue : [];
-  const currentIndex = queue.indexOf(selectedVideoId);
-  const nextVideoId = currentIndex >= 0 ? queue[currentIndex + 1] : queue[0];
+  const queue = (Array.isArray(roomState.queue) ? roomState.queue : []).map(normalizeQueueItem);
+  const currentIndex = queue.findIndex((item) => item?.id === selectedVideoId);
+  const nextVideo = currentIndex >= 0 ? queue[currentIndex + 1] : queue[0];
+  const nextVideoId = nextVideo?.id;
   if (!nextVideoId) return;
   if (!window.confirm('Video selesai. Lanjutkan ke video berikutnya?')) {
     isPlaying = false;
@@ -128,20 +154,20 @@ function playNextVideo() {
     return;
   }
   selectVideo(nextVideoId);
-  ytPlayer?.playVideo?.();
+  playCurrentMedia();
   isPlaying = true;
   sendRealtime({ type: 'playback', playing: true, position: 0 });
 }
 
 function initYouTubePlayer() {
-  if (ytPlayer || !selectedVideoId || !window.YT?.Player) return;
+  if (ytPlayer || !currentVideo?.videoId || !window.YT?.Player) return;
   ytPlayer = new YT.Player('videoPlayer', {
-    videoId: selectedVideoId,
+    videoId: currentVideo.videoId,
     playerVars: { autoplay: 0, controls: 0, enablejsapi: 1, origin: window.location.origin },
     events: {
       onReady: (event) => {
         ytPlayer = event.target;
-        updateNowPlayingFromPlayer() || updateNowPlaying(selectedVideoId);
+        updateNowPlayingFromPlayer() || updateNowPlaying(currentVideo.videoId);
         setTimeout(updateNowPlayingFromPlayer, 1800);
         if (roomState.currentVideoId === selectedVideoId) setRemotePlayback(roomState.playing, roomState.position);
         if (autoplayOnReady) {
@@ -166,6 +192,76 @@ function initYouTubePlayer() {
       }
     }
   });
+}
+
+function destroyYouTubePlayer() {
+  ytPlayer?.destroy?.();
+  ytPlayer = null;
+}
+
+function playCurrentMedia() {
+  if (ytPlayer?.playVideo) ytPlayer.playVideo();
+  else mediaVideo?.play().catch(() => {});
+}
+
+function enableMediaAudio() {
+  if (ytPlayer) {
+    ytPlayer.unMute?.();
+    ytPlayer.setVolume?.(100);
+  }
+  if (mediaVideo) {
+    mediaVideo.muted = false;
+    mediaVideo.volume = 1;
+  }
+  needsAudioResume = false;
+}
+
+function pauseCurrentMedia() {
+  if (ytPlayer?.pauseVideo) ytPlayer.pauseVideo();
+  else mediaVideo?.pause();
+}
+
+function renderVideoSource(item) {
+  destroyYouTubePlayer();
+  mediaVideo?.remove();
+  mediaVideo = null;
+  const player = $('#videoPlayer');
+  player.innerHTML = '';
+  if (item.type === 'unsupported') {
+    $('#nowPlayingTitle').textContent = item.title;
+    $('#nowPlayingChannel').textContent = 'Gunakan link player atau file video langsung';
+    $('#nowPlayingViews').textContent = 'Link tidak bisa di-embed';
+    showToast('Link ini adalah halaman web, bukan link player video');
+    return;
+  }
+  if (item.type === 'youtube') {
+    if (window.YT?.Player) initYouTubePlayer();
+  } else if (item.type === 'video') {
+    mediaVideo = document.createElement('video');
+    mediaVideo.src = item.url;
+    mediaVideo.controls = false;
+    mediaVideo.playsInline = true;
+    mediaVideo.addEventListener('play', () => { isPlaying = true; updatePlayButton(); });
+    mediaVideo.addEventListener('pause', () => { isPlaying = false; updatePlayButton(); });
+    mediaVideo.addEventListener('ended', playNextVideo);
+    mediaVideo.addEventListener('loadedmetadata', () => setRemotePlayback(roomState.playing, roomState.position));
+    player.append(mediaVideo);
+  } else {
+    const iframe = document.createElement('iframe');
+    iframe.src = item.embedUrl || item.url;
+    iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+    iframe.allowFullscreen = true;
+    iframe.style.pointerEvents = 'auto';
+    iframe.title = item.title || 'Video';
+    player.append(iframe);
+    $('#nowPlayingTitle').textContent = item.title || 'Video dari link';
+    $('#nowPlayingChannel').textContent = item.type === 'bilibili' ? 'Bilibili' : item.type === 'drive' ? 'Google Drive' : new URL(item.url).hostname;
+    $('#nowPlayingViews').textContent = 'Link eksternal';
+  }
+  if (item.type === 'youtube') {
+    updateNowPlaying(item.videoId);
+    setTimeout(updateNowPlayingFromPlayer, 1200);
+  }
 }
 
 window.onYouTubeIframeAPIReady = initYouTubePlayer;
@@ -266,6 +362,7 @@ function clearChatView() {
 
 function showEmptyVideoState() {
   selectedVideoId = null;
+  currentVideo = null;
   isPlaying = false;
   $('#videoFrame').classList.add('empty-video');
   $('#noVideoState').classList.remove('hidden');
@@ -279,7 +376,10 @@ function renderViewers(names = []) {
   const list = $('#watchingList');
   list.innerHTML = '';
   const people = names.length ? names : [{ id: clientId, name: userName || 'You' }];
-  const visibleNames = people.map((person) => typeof person === 'string' ? { id: '', name: person } : person);
+  const visibleNames = people.map((person) => {
+    if (typeof person === 'string') return { id: '', name: person };
+    return { id: person?.id || '', name: person?.name || 'Guest' };
+  });
   $('#viewerModalCount').textContent = visibleNames.length;
   visibleNames.forEach((personData) => {
     const person = document.createElement('div');
@@ -296,7 +396,7 @@ function renderViewers(names = []) {
 }
 
 function clearQueueView() {
-  queueList.innerHTML = '<div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link YouTube untuk mulai menyusun tontonan.</span></div>';
+  queueList.innerHTML = '<div class="empty-state queue-empty"><i data-lucide="list-video"></i><strong>Queue masih kosong</strong><span>Tambahkan link video apa saja untuk mulai menyusun tontonan.</span></div>';
   $('#queueCount').textContent = '0';
   lucide.createIcons();
 }
@@ -338,7 +438,7 @@ function connectRealtime() {
     knownPresenceIds = currentPresenceIds;
     knownPresenceNames = new Map(presenceEntries.map(([id, person]) => [id, person.name || 'Seseorang']));
     presenceInitialized = true;
-    const viewers = presenceEntries.map(([id, person]) => ({ id, name: person.name })).filter((person) => person.name);
+    const viewers = presenceEntries.map(([id, person]) => ({ id, name: person?.name || 'Guest' }));
     currentPresencePeople = viewers;
     const typingNames = presenceEntries
       .filter(([id, person]) => id !== clientId && person.isTyping)
@@ -360,9 +460,10 @@ function connectRealtime() {
     roomState = snapshot.val() || {};
     if (roomState.hostId) isHost = roomState.hostId === clientId;
     else if (isHost) update(ref(roomRef, 'state'), { hostId: clientId });
+    updatePlaybackControls();
     renderViewers(currentPresencePeople);
     clearQueueView();
-    (roomState.queue || []).forEach((videoId) => addQueueItem(videoId, false));
+    (roomState.queue || []).forEach((video) => addQueueItem(normalizeQueueItem(video), false));
     if (roomState.currentVideoId && roomState.currentVideoId !== selectedVideoId) selectVideo(roomState.currentVideoId, false);
       else if (!roomState.currentVideoId && selectedVideoId) showEmptyVideoState();
     if (roomState.lastActor !== clientId) setRemotePlayback(roomState.playing, roomState.position);
@@ -442,14 +543,14 @@ function sendRealtime(message) {
   if (message.type === 'queue_add') {
     runTransaction(ref(roomRef, 'state/queue'), (queue = []) => {
       const nextQueue = Array.isArray(queue) ? queue : [];
-      return nextQueue.includes(message.videoId) ? nextQueue : [...nextQueue, message.videoId];
+      return nextQueue.some((item) => normalizeQueueItem(item)?.id === message.video.id) ? nextQueue : [...nextQueue, message.video];
     });
     return true;
   }
   if (message.type === 'queue_remove' || message.type === 'queue_move') {
     runTransaction(ref(roomRef, 'state/queue'), (queue = []) => {
       const nextQueue = Array.isArray(queue) ? [...queue] : [];
-      const index = nextQueue.indexOf(message.videoId);
+      const index = nextQueue.findIndex((item) => normalizeQueueItem(item)?.id === message.videoId);
       if (index < 0) return nextQueue;
       if (message.type === 'queue_remove') nextQueue.splice(index, 1);
       else {
@@ -469,6 +570,7 @@ function sendRealtime(message) {
     return true;
   }
   if (message.type === 'playback') {
+    if (!isHost) return false;
     update(ref(roomRef, 'state'), { playing: message.playing, position: message.position, lastActor: clientId });
     return true;
   }
@@ -592,27 +694,28 @@ function showToast(message) {
 function setRemotePlayback(playing, position) {
   isPlaying = playing;
   updatePlayButton();
-  if (!ytPlayer?.seekTo) return;
+  if (!ytPlayer?.seekTo && !mediaVideo) return;
   suppressPlaybackUntil = Date.now() + 1500;
   syncingRemotePlayback = true;
-  ytPlayer.seekTo(Number(position) || 0, true);
+  if (ytPlayer?.seekTo) ytPlayer.seekTo(Number(position) || 0, true);
+  if (mediaVideo) mediaVideo.currentTime = Number(position) || 0;
   if (playing) {
-    ytPlayer.mute();
-    ytPlayer.playVideo();
+    ytPlayer?.mute?.();
+    if (mediaVideo) mediaVideo.muted = true;
+    playCurrentMedia();
     needsAudioResume = true;
   }
     else {
-      ytPlayer.pauseVideo();
+      pauseCurrentMedia();
       needsAudioResume = false;
     }
-  sendYouTubeCommand(playing ? 'playVideo' : 'pauseVideo');
+  if (ytPlayer) sendYouTubeCommand(playing ? 'playVideo' : 'pauseVideo');
   setTimeout(() => { syncingRemotePlayback = false; }, 700);
 }
 
 function resumeAudioAfterInteraction() {
-  if (!needsAudioResume || !ytPlayer) return;
-  ytPlayer.unMute();
-  needsAudioResume = false;
+  if (!needsAudioResume) return;
+  enableMediaAudio();
 }
 
 document.addEventListener('pointerdown', resumeAudioAfterInteraction, { once: false });
@@ -620,10 +723,12 @@ document.addEventListener('keydown', resumeAudioAfterInteraction, { once: false 
 
 const playButton = $('#playButton');
 function togglePlayback() {
+  if (!isHost) return showToast('Hanya admin yang dapat mengatur playback');
   if (!selectedVideoId) return showToast('Pilih video dari queue terlebih dahulu');
   isPlaying = !isPlaying;
-  if (ytPlayer?.playVideo && ytPlayer?.pauseVideo) isPlaying ? ytPlayer.playVideo() : ytPlayer.pauseVideo();
-  sendYouTubeCommand(isPlaying ? 'playVideo' : 'pauseVideo');
+  isPlaying ? playCurrentMedia() : pauseCurrentMedia();
+  if (ytPlayer) sendYouTubeCommand(isPlaying ? 'playVideo' : 'pauseVideo');
+  if (isPlaying) enableMediaAudio();
   sendPlaybackState();
   updatePlayButton();
   showToast(isPlaying ? 'Playback dimulai untuk semua orang' : 'Playback dijeda untuk semua orang');
@@ -692,25 +797,45 @@ function getYoutubeId(value) {
   return null;
 }
 
-function addQueueItem(videoId, notifyServer = true) {
-  if (queueList.querySelector(`[data-video-id="${videoId}"]`)) return;
+function parseVideoUrl(value) {
+  let url;
+  try { url = new URL(value); } catch { return null; }
+  if (!['http:', 'https:'].includes(url.protocol)) return null;
+  const youtubeId = getYoutubeId(value);
+  if (youtubeId) return { id: `youtube:${youtubeId}`, type: 'youtube', videoId: youtubeId, url: url.href, title: `YouTube video · ${youtubeId}` };
+  const driveId = url.hostname.includes('drive.google.com') ? url.pathname.match(/\/d\/([^/]+)/)?.[1] || url.searchParams.get('id') : null;
+  if (driveId) return { id: `drive:${driveId}`, type: 'drive', url: url.href, embedUrl: `https://drive.google.com/file/d/${driveId}/preview`, title: 'Google Drive video' };
+  const isBilibiliHost = /(^|\.)bilibili\.com$|(^|\.)bilibili\.tv$|(^|\.)bstation\./i.test(url.hostname);
+  const bilibiliId = isBilibiliHost ? url.pathname.match(/\/(BV[a-zA-Z0-9]+)/i)?.[1] || url.searchParams.get('bvid') : null;
+  if (bilibiliId) return { id: `bilibili:${bilibiliId}`, type: 'bilibili', url: url.href, embedUrl: `https://player.bilibili.com/player.html?bvid=${bilibiliId}&page=1&autoplay=0`, title: 'Bilibili video' };
+  if (isBilibiliHost) return { id: `unsupported:${url.href}`, type: 'unsupported', url: url.href, title: 'Bilibili link perlu BV ID' };
+  if (/\.(mp4|webm|ogg|m3u8)(?:$|[?#])/i.test(url.pathname + url.search)) return { id: `video:${url.href}`, type: 'video', url: url.href, title: 'Video dari link langsung' };
+  if (/\/((embed|player)(?:[./?]|$))/i.test(url.pathname + url.search)) return { id: `embed:${url.href}`, type: 'embed', url: url.href, title: `Video · ${url.hostname}` };
+  return { id: `unsupported:${url.href}`, type: 'unsupported', url: url.href, title: 'Link ini bukan player video' };
+}
+
+function addQueueItem(video, notifyServer = true) {
+  const itemData = normalizeQueueItem(video);
+  if (!itemData?.id || queueList.querySelector(`[data-video-id="${CSS.escape(itemData.id)}"]`)) return;
   $('.queue-empty')?.remove();
   const item = document.createElement('article');
   item.className = 'queue-item';
-  item.dataset.videoId = videoId;
-  item.innerHTML = `<span class="drag"><i data-lucide="grip-vertical"></i></span><div class="thumb youtube-thumb" style="background-image:url('https://img.youtube.com/vi/${videoId}/mqdefault.jpg')"></div><div class="queue-copy"><span class="queue-now-playing hidden">NOW PLAYING</span><strong>YouTube video · ${videoId}</strong><span>Added just now · ready to watch</span></div><div class="queue-actions"><button class="queue-action" data-action="up" aria-label="Move video up"><i data-lucide="chevron-up"></i></button><button class="queue-action" data-action="down" aria-label="Move video down"><i data-lucide="chevron-down"></i></button><button class="queue-action danger" data-action="remove" aria-label="Remove video"><i data-lucide="trash-2"></i></button></div>`;
+  item.dataset.videoId = itemData.id;
+  item.innerHTML = `<span class="drag"><i data-lucide="grip-vertical"></i></span><div class="thumb youtube-thumb"></div><div class="queue-copy"><span class="queue-now-playing hidden">NOW PLAYING</span><strong></strong><span>${itemData.type.toUpperCase()} · ready to watch</span></div><div class="queue-actions"><button class="queue-action" data-action="up" aria-label="Move video up"><i data-lucide="chevron-up"></i></button><button class="queue-action" data-action="down" aria-label="Move video down"><i data-lucide="chevron-down"></i></button><button class="queue-action danger" data-action="remove" aria-label="Remove video"><i data-lucide="trash-2"></i></button></div>`;
+  item.querySelector('.queue-copy strong').textContent = itemData.title || itemData.url;
+  if (itemData.type === 'youtube') item.querySelector('.thumb').style.backgroundImage = `url('https://img.youtube.com/vi/${itemData.videoId}/mqdefault.jpg')`;
   queueList.append(item);
   $('#queueCount').textContent = queueList.querySelectorAll('.queue-item').length;
-  fetch(`/api/video?id=${encodeURIComponent(videoId)}`)
+  if (itemData.type === 'youtube') fetch(`/api/video?id=${encodeURIComponent(itemData.videoId)}`)
     .then((response) => response.ok ? response.json() : null)
     .then((video) => {
       if (video) item.querySelector('.queue-copy strong').textContent = video.title;
     })
     .catch(() => {});
-  if (notifyServer) sendRealtime({ type: 'queue_add', videoId });
+  if (notifyServer) sendRealtime({ type: 'queue_add', video: itemData });
   item.addEventListener('click', (event) => {
     if (event.target.closest('.queue-actions')) return;
-    selectVideo(videoId);
+    selectVideo(itemData);
     showToast('Video dimuat ke player utama');
     if (window.matchMedia('(max-width:900px)').matches) toggleQueueDrawer(false);
   });
@@ -718,7 +843,7 @@ function addQueueItem(videoId, notifyServer = true) {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       const action = button.dataset.action;
-      sendRealtime(action === 'remove' ? { type: 'queue_remove', videoId } : { type: 'queue_move', videoId, direction: action === 'up' ? -1 : 1 });
+      sendRealtime(action === 'remove' ? { type: 'queue_remove', videoId: itemData.id } : { type: 'queue_move', videoId: itemData.id, direction: action === 'up' ? -1 : 1 });
     });
   });
   updateQueueActiveState();
@@ -729,21 +854,21 @@ $('#queueButton').addEventListener('click', openVideoModal);
 $('#closeVideoButton').addEventListener('click', () => videoModal.classList.add('hidden'));
 $('#cancelVideoButton').addEventListener('click', () => videoModal.classList.add('hidden'));
 $('#addVideoButton').addEventListener('click', () => {
-  const videoId = getYoutubeId(videoUrlInput.value.trim());
-  if (!videoId) {
+  const video = parseVideoUrl(videoUrlInput.value.trim());
+  if (!video) {
     videoError.classList.add('visible');
     videoUrlInput.focus();
     return;
   }
   videoError.classList.remove('visible');
   const isFirstVideo = !selectedVideoId && !queueList.querySelector('.queue-item');
-  addQueueItem(videoId);
-  if (isFirstVideo) {
+  addQueueItem(video);
+  if (isFirstVideo && isHost) {
     autoplayOnReady = true;
-    selectVideo(videoId);
+    selectVideo(video);
     setTimeout(() => {
-      if (ytPlayer?.playVideo) {
-        ytPlayer.playVideo();
+      if (ytPlayer?.playVideo || mediaVideo) {
+        playCurrentMedia();
         isPlaying = true;
         autoplayOnReady = false;
         sendRealtime({ type: 'playback', playing: true, position: 0 });
@@ -911,9 +1036,13 @@ function showVideoControls() {
 }
 
 function skipVideo(seconds) {
-  if (!ytPlayer?.getCurrentTime || !ytPlayer?.getDuration) return;
-  const nextPosition = Math.max(0, Math.min(ytPlayer.getDuration(), ytPlayer.getCurrentTime() + seconds));
-  ytPlayer.seekTo(nextPosition, true);
+  if (!isHost) return showToast('Hanya admin yang dapat menggeser video');
+  const duration = ytPlayer?.getDuration?.() || mediaVideo?.duration;
+  const position = getMediaPosition();
+  if (!duration) return;
+  const nextPosition = Math.max(0, Math.min(duration, position + seconds));
+  if (ytPlayer?.seekTo) ytPlayer.seekTo(nextPosition, true);
+  if (mediaVideo) mediaVideo.currentTime = nextPosition;
   sendRealtime({ type: 'playback', playing: isPlaying, position: Math.round(nextPosition) });
   showVideoControls();
 }
@@ -923,22 +1052,24 @@ $('#skipForwardButton').addEventListener('click', () => skipVideo(5));
 progressBar.addEventListener('pointerdown', () => { isSeeking = true; });
 progressBar.addEventListener('pointerup', () => {
   isSeeking = false;
-  if (ytPlayer?.seekTo) {
-    const seconds = Math.round((Number(progressBar.value) / 100) * (ytPlayer.getDuration() || 0));
-    ytPlayer.seekTo(seconds, true);
+  if (ytPlayer?.seekTo || mediaVideo) {
+    const seconds = Math.round((Number(progressBar.value) / 100) * (ytPlayer?.getDuration?.() || mediaVideo?.duration || 0));
+    if (ytPlayer?.seekTo) ytPlayer.seekTo(seconds, true);
+    if (mediaVideo) mediaVideo.currentTime = seconds;
     sendPlaybackState();
+    if (isHost) enableMediaAudio();
   }
   showVideoControls();
 });
 progressBar.addEventListener('input', () => {
-  const seconds = Math.round((Number(progressBar.value) / 100) * (ytPlayer?.getDuration?.() || 3764));
+  const seconds = Math.round((Number(progressBar.value) / 100) * (ytPlayer?.getDuration?.() || mediaVideo?.duration || 0));
   currentTime.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 });
 
 function updateProgress() {
-  if (ytPlayer?.getDuration) {
-    const duration = ytPlayer.getDuration();
-    const position = ytPlayer.getCurrentTime();
+  const duration = ytPlayer?.getDuration?.() || mediaVideo?.duration;
+  if (duration) {
+    const position = getMediaPosition();
     if (duration && !isSeeking) progressBar.value = (position / duration) * 100;
     if (duration) durationTime.textContent = `${String(Math.floor(duration / 60)).padStart(2, '0')}:${String(Math.floor(duration % 60)).padStart(2, '0')}`;
     currentTime.textContent = `${String(Math.floor(position / 60)).padStart(2, '0')}:${String(Math.floor(position % 60)).padStart(2, '0')}`;

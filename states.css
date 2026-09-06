@@ -1,4 +1,7 @@
+.chat-message>div{min-width:0}
+.chat-message p{overflow-wrap:anywhere;word-break:break-word}
 .chat-feed{min-height:0;overflow-y:auto}
+.chat-feed{min-height:0;overflow-y:scroll;justify-content:flex-start}
 .chat-message[hidden]{display:none!important}
 .chat-panel{height:min(650px,calc(100vh - 110px));min-height:520px;position:sticky;top:20px}
 @media(max-width:900px){
@@ -7,8 +10,8 @@
   .topbar{position:relative;z-index:90}
   .workspace{min-height:0;overflow:hidden}
   .workspace{gap:8px}
-  .chat-panel{height:520px;min-height:520px;position:static;padding-bottom:130px}
-  .chat-feed{padding-bottom:146px;scroll-padding-bottom:146px}
+  .chat-panel{height:520px;min-height:520px;position:static;padding-bottom:20px}
+  .chat-feed{padding-bottom:104px;scroll-padding-bottom:20px}
   .message-form{
     position:fixed;
     left:10px;
