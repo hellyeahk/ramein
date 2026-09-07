@@ -10,12 +10,226 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="states.css" />
-    <style>#videoPlayer{width:100%;height:100%}#videoPlayer iframe,#videoPlayer video{width:100%;height:100%;border:0;display:block;background:#000}#videoPlayer video{object-fit:contain}</style>
-      <style>#videoPlayer{width:100%;height:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:#000}#videoPlayer iframe,#videoPlayer video{width:100%;height:100%;max-width:100%;max-height:100%;border:0;display:block;background:#000}#videoPlayer video{object-fit:contain}</style>
-    <style>.video-overlay{inset:auto;left:50%;bottom:50%;width:0;height:0;background:none;pointer-events:none}.big-play{position:absolute;left:-33px;top:-33px;pointer-events:auto}</style>
-    <style>.video-frame iframe{pointer-events:none}.video-controls{position:absolute;z-index:4;left:16px;right:16px;bottom:14px;display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0e0f12d9;color:#d9d6ce;font:500 10px 'DM Mono',monospace}.video-controls input{flex:1;min-width:0;height:3px;accent-color:var(--accent)}.video-controls button{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#111}.video-controls button svg{width:12px;fill:#111}.video-controls button svg[data-lucide=pause]{fill:none}.video-frame{cursor:pointer}.video-frame .video-topline,.video-frame .video-controls,.video-frame .big-play{cursor:default}.video-frame .video-controls button,.video-frame .big-play{cursor:pointer}</style>
-    <style>.watching-list{display:grid;gap:8px;margin:4px 0 20px}.watching-list-title{color:var(--dim);font:500 9px 'DM Mono',monospace;letter-spacing:1px}.watching-person{display:flex;align-items:center;gap:8px;color:#d8d5ce;font-size:11px}.watching-person .avatar{width:24px;height:24px}.watching-person .person-status{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:auto}</style>
-    <style>.no-video-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:#17191b;color:var(--muted);text-align:center}.no-video-state svg{width:32px;color:var(--accent)}.no-video-state strong{color:var(--ink);font-size:15px}.no-video-state span{max-width:270px;font-size:11px;line-height:1.5}.filter-menu{position:absolute;right:0;top:43px;z-index:6;width:145px;padding:5px;background:#252629;border:1px solid #3b3c3e;box-shadow:0 12px 30px #0008}.chat-tools{position:relative}.filter-menu button{display:block;width:100%;padding:9px 10px;background:transparent;color:var(--muted);font-size:10px;text-align:left}.filter-menu button:hover,.filter-menu button.active{background:#34382b;color:var(--accent)}</style>
+    <style>
+      #videoPlayer {
+        width: 100%;
+        height: 100%
+      }
+
+      #videoPlayer iframe,
+      #videoPlayer video {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+        background: #000
+      }
+
+      #videoPlayer video {
+        object-fit: contain
+      }
+    </style>
+      <style>
+      #videoPlayer {
+        width: 100%;
+        height: 100%;
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000
+      }
+
+      #videoPlayer iframe,
+      #videoPlayer video {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        border: 0;
+        display: block;
+        background: #000
+      }
+
+      #videoPlayer video {
+        object-fit: contain
+      }
+    </style>
+    <style>
+      .video-overlay {
+        inset: auto;
+        left: 50%;
+        bottom: 50%;
+        width: 0;
+        height: 0;
+        background: none;
+        pointer-events: none
+      }
+
+      .big-play {
+        position: absolute;
+        left: -33px;
+        top: -33px;
+        pointer-events: auto
+      }
+    </style>
+    <style>
+      .video-frame iframe {
+        pointer-events: none
+      }
+
+      .video-controls {
+        position: absolute;
+        z-index: 4;
+        left: 16px;
+        right: 16px;
+        bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        background: #0e0f12d9;
+        color: #d9d6ce;
+        font: 500 10px 'DM Mono', monospace
+      }
+
+      .video-controls input {
+        flex: 1;
+        min-width: 0;
+        height: 3px;
+        accent-color: var(--accent)
+      }
+
+      .video-controls button {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #111
+      }
+
+      .video-controls button svg {
+        width: 12px;
+        fill: #111
+      }
+
+      .video-controls button svg[data-lucide=pause] {
+        fill: none
+      }
+
+      .video-frame {
+        cursor: pointer
+      }
+
+      .video-frame .video-topline,
+      .video-frame .video-controls,
+      .video-frame .big-play {
+        cursor: default
+      }
+
+      .video-frame .video-controls button,
+      .video-frame .big-play {
+        cursor: pointer
+      }
+    </style>
+    <style>
+      .watching-list {
+        display: grid;
+        gap: 8px;
+        margin: 4px 0 20px
+      }
+
+      .watching-list-title {
+        color: var(--dim);
+        font: 500 9px 'DM Mono', monospace;
+        letter-spacing: 1px
+      }
+
+      .watching-person {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #d8d5ce;
+        font-size: 11px
+      }
+
+      .watching-person .avatar {
+        width: 24px;
+        height: 24px
+      }
+
+      .watching-person .person-status {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        margin-left: auto
+      }
+    </style>
+    <style>
+      .no-video-state {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        background: #17191b;
+        color: var(--muted);
+        text-align: center
+      }
+
+      .no-video-state svg {
+        width: 32px;
+        color: var(--accent)
+      }
+
+      .no-video-state strong {
+        color: var(--ink);
+        font-size: 15px
+      }
+
+      .no-video-state span {
+        max-width: 270px;
+        font-size: 11px;
+        line-height: 1.5
+      }
+
+      .filter-menu {
+        position: absolute;
+        right: 0;
+        top: 43px;
+        z-index: 6;
+        width: 145px;
+        padding: 5px;
+        background: #252629;
+        border: 1px solid #3b3c3e;
+        box-shadow: 0 12px 30px #0008
+      }
+
+      .chat-tools {
+        position: relative
+      }
+
+      .filter-menu button {
+        display: block;
+        width: 100%;
+        padding: 9px 10px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 10px;
+        text-align: left
+      }
+
+      .filter-menu button:hover,
+      .filter-menu button.active {
+        background: #34382b;
+        color: var(--accent)
+      }
+    </style>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
   </head>

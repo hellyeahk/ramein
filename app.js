@@ -185,6 +185,10 @@ function initYouTubePlayer() {
           playNextVideo();
           return;
         }
+        if (event.data === YT.PlayerState.PAUSED && !isHost && roomState.playing) {
+          setTimeout(keepViewerPlaying, 100);
+          return;
+        }
         if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
           isPlaying = event.data === YT.PlayerState.PLAYING;
           updatePlayButton();
@@ -221,6 +225,13 @@ function pauseCurrentMedia() {
   else mediaVideo?.pause();
 }
 
+function keepViewerPlaying() {
+  if (isHost || !roomState.playing || syncingRemotePlayback) return;
+  isPlaying = true;
+  playCurrentMedia();
+  updatePlayButton();
+}
+
 function renderVideoSource(item) {
   destroyYouTubePlayer();
   mediaVideo?.remove();
@@ -242,7 +253,14 @@ function renderVideoSource(item) {
     mediaVideo.controls = false;
     mediaVideo.playsInline = true;
     mediaVideo.addEventListener('play', () => { isPlaying = true; updatePlayButton(); });
-    mediaVideo.addEventListener('pause', () => { isPlaying = false; updatePlayButton(); });
+    mediaVideo.addEventListener('pause', () => {
+      if (!isHost && roomState.playing && !syncingRemotePlayback) {
+        setTimeout(keepViewerPlaying, 100);
+        return;
+      }
+      isPlaying = false;
+      updatePlayButton();
+    });
     mediaVideo.addEventListener('ended', playNextVideo);
     mediaVideo.addEventListener('loadedmetadata', () => setRemotePlayback(roomState.playing, roomState.position));
     player.append(mediaVideo);
